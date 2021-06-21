@@ -29,7 +29,7 @@ class Archiver:
             raise ValueError('Cannot instantiate Archiver without a proper link to the service.\
                                 Please set EPICS_ARCHIVER_URL in your env')
 
-    def getDataSetForPV(self, PV, start_date, end_date=None, decimate=1000, verbose=False) -> pandas.DataFrame:
+    def get(self, PV, start_date, end_date=None, decimate=1000, verbose=False) -> pandas.DataFrame:
         """
         Returns the archiver data for one or many pvs withing the given start_date and end_date.
         :param PV:
