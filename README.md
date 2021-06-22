@@ -43,9 +43,11 @@ Setup of the environmental variable is possible.
 
 ## Installation
 
+Enter the folder with the source
+
 `make install`
 or
-`pip install`
+`pip install .`
 
 
 
