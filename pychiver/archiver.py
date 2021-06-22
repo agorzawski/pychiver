@@ -53,8 +53,7 @@ class Archiver:
 
         self.archiver = DefaultEndPoint(archiver_url=archiver_url)
 
-    def get(self, PV, start_date, end_date=None,
-            entries_limit=None, verbose=False) -> dict[str, pandas.DataFrame]:
+    def get(self, PV, start_date, end_date=None, entries_limit=None, verbose=False):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
 
@@ -71,20 +70,20 @@ class Archiver:
                 if verbose:
                     print('Collecting data for', onePV)
                 dataToReturn[onePV] = self.archiver.getDataForPV(onePV, start_date=start_date,
-                                                         end_date=end_date, entries_limit=entries_limit, )
+                                                                 end_date=end_date,
+                                                                 entries_limit=entries_limit, )
             return dataToReturn
         else:
             return {PV: self.archiver.getDataForPV(PV, start_date=start_date, end_date=end_date,
                                                    entries_limit=entries_limit)}
 
-    def getAligned(self, PVS: list[str], start_date, end_date=None,
-                   time_base=None, strategy=LinearInterpolationStrategy,
-                   entries_limit=None) -> dict[str, pandas.DataFrame]:
+    def getAligned(self, PVS: list, start_date, end_date=None,
+                   time_base=None, strategy=LinearInterpolationStrategy, entries_limit=None):
         """
         Extracts PVs and aligns to the timestamps of the first PV in the list or separatly provided time base.
 
 
-        :param PVS: list of PVS to be extracted
+        :param PVS: list of PVS (string) to be extracted
         :param start_date:
         :param end_date:
         :param time_base: New time base to use, default None, then first PV timestamps' in the set is used
@@ -95,10 +94,10 @@ class Archiver:
         raise NotImplementedError("Not implemented yet")
         # TODO finish first implementation for the interpolating with the provided time
 
-    def getPulseData(self, pulse_id: int) -> pandas.DataFrame:
+    def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
         """
         Returns data associated with the PulseId
-        :param pulse_id:
+        :param cycle_id:
         :return:
         """
         # TODO add when timing data in the archiver
@@ -112,5 +111,3 @@ class Archiver:
         """
         # TODO add simple PVInfo return
         raise NotImplementedError("Not implemented yet")
-
-
