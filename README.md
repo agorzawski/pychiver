@@ -14,8 +14,6 @@ archiver = Archiver(archiver_url='http://archiver-01.tn.esss.lu.se:17668/retriev
 
 start = "2021-06-17 18:00:00"
 end = "2021-06-20 12:00:00"
-data = archiver.get("RFQ-010:RFS-Kly-110:Oil-Tmp", start_date=start, end_date=end)
-# return simple dataframe
 
 pvs = ("RFQ-010:RFS-Kly-110:Oil-Tmp", "RFQ-010:RFS-Kly-110:Coll-WtrC-Flw")
 data = archiver.get(pvs, start_date=start, end_date=end)
@@ -23,7 +21,7 @@ data = archiver.get(pvs, start_date=start, end_date=end)
 ```
 As it is `pandas` dataframe, one can do direct plots on it
 ```python
-data.plot(x='time', y='val')
+data['RFQ-010:RFS-Kly-110:Oil-Tmp'].plot(x='time', y='val')
 ```
 
 ### Get Waveform Data

@@ -17,6 +17,7 @@ setuptools.setup(
           'requests',
           'pandas',
           'matplotlib',
+          'numpy'
      ],
      packages=setuptools.find_packages(),
  )
