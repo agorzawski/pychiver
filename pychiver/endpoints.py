@@ -23,6 +23,9 @@ class EndPoint:
     def getDataForPV(self, PV: str, start_date, end_date=None, entries_limit=None) -> pandas.DataFrame:
         raise NotImplementedError('Abstract implementation called, use concrete ones.')
 
+    def getPVStatus(self, PV):
+        raise NotImplementedError('Abstract implementation called, use concrete ones.')
+
 
 class JsonEndPointArchiver(EndPoint):
     """
@@ -38,7 +41,8 @@ class JsonEndPointArchiver(EndPoint):
                                                           start_date, end_date)
         json_data = requests.get(nth_url).json()[0]['data']
         dataset = pandas.read_json(json.dumps(json_data))
-        dataset['time'] = pandas.to_datetime(dataset['secs'] + dataset['nanos'] / 1e9, unit='s')
+        dataset['secs_nanos'] = dataset['secs'] + dataset['nanos'] / 1e9
+        dataset['time'] = pandas.to_datetime(dataset['secs_nanos'], unit='s')
         return dataset
 
     def _countEntries(self, PV, start_date, end_date) -> int:
