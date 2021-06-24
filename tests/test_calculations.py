@@ -17,6 +17,8 @@ DF_1 = pd.DataFrame(np.array([[1.0, 2, 3],
                               [4.0, 7, 3],
                               [5.0, 4, 2]]),
                     columns=DF_COLUMNS)
+DF_1_VAL_MOVING_AVERAGE_2_s = [3.5, 6.5, 7.5, 5.5]
+
 DF_2 = pd.DataFrame(np.array([[1.0, 2, 3],
                               [2.5, 5, 6],
                               [3.1, 8, 9],
@@ -62,25 +64,25 @@ class TestLinearInterpolation(unittest.TestCase):
 class TestDataAlign(unittest.TestCase):
     def test_wrong_init_no_interpolation(self):
         with self.assertRaises(ValueError):
-            alignManyDataFrames({"PV1": DF_1, "PV2": DF_2})
+            alignDataFrames({"PV1": DF_1, "PV2": DF_2})
 
     def test_wrong_init_wrong_amount_dfs(self):
         with self.assertRaises(ValueError):
-            alignManyDataFrames({"PV1": DF_1}, InterpolationStrategyImpl=InterpolationStrategy)
+            alignDataFrames({"PV1": DF_1}, InterpolationStrategyImpl=InterpolationStrategy)
 
     def test_wrong_init_wrong_columns_in_df(self):
         with self.assertRaises(ValueError):
-            alignManyDataFrames({"PV1": DF_1, "PV2": DF_RAND_COLUMNS},
+            alignDataFrames({"PV1": DF_1, "PV2": DF_RAND_COLUMNS},
                                 InterpolationStrategyImpl=InterpolationStrategy)
 
     def test_align_with_first_df_time(self):
-        result = alignManyDataFrames({"PV1": DF_1, "PV2": DF_2},
+        result = alignDataFrames({"PV1": DF_1, "PV2": DF_2},
                                      # verbose=True,
                                      InterpolationStrategyImpl=LinearInterpolationStrategy)
         self._compare_two_arrays(DF_2_VAL_FOR_DF_1_TIME, result['PV2:val'].to_numpy())
 
     def test_align_with_external_time_base(self):
-        result = alignManyDataFrames({"PV1": DF_1, "PV2": DF_2}, time_base=EXTERNAL_TIME_BASE,
+        result = alignDataFrames({"PV1": DF_1, "PV2": DF_2}, time_base=EXTERNAL_TIME_BASE,
                                      value_columns=("val", 'some_other'),
                                      # verbose=True,
                                      InterpolationStrategyImpl=LinearInterpolationStrategy)
@@ -88,11 +90,22 @@ class TestDataAlign(unittest.TestCase):
         self._compare_two_arrays(DF_2_VAL_FOR_EXTERNAL_TIME_BASE, result['PV2:val'].to_numpy())
 
     def test_align_one_df_with_external_time_base(self):
-        result = alignManyDataFrames({"PV1": DF_1}, time_base=EXTERNAL_TIME_BASE,
+        result = alignDataFrames({"PV1": DF_1}, time_base=EXTERNAL_TIME_BASE,
                                      value_columns=("val", 'some_other'),
                                      # verbose=True,
                                      InterpolationStrategyImpl=LinearInterpolationStrategy)
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE, result['PV1:val'].to_numpy())
+
+    def _compare_two_arrays(self, array1, array2):
+        self.assertEqual(len(array1), len(array2))
+        for i in range(len(array1)):
+            self.assertAlmostEqual(array1[i], array2[i], places=2)
+
+
+class TestMovingAverage(unittest.TestCase):
+    def test_simple(self):
+        df = calculateMovingAverage(DF_1, window=2, time_column='time')
+        self._compare_two_arrays(df['mean_val'].to_numpy(), DF_1_VAL_MOVING_AVERAGE_2_s)
 
     def _compare_two_arrays(self, array1, array2):
         self.assertEqual(len(array1), len(array2))

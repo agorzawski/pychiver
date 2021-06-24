@@ -40,18 +40,23 @@ class LinearInterpolationStrategy(InterpolationStrategy):
         return np.interp(self.baseTs, xs, ys)
 
 
-def alignManyDataFrames(dict_of_datasets,
-                        time_base=None, InterpolationStrategyImpl=None,
+def alignDataFrames(dict_of_datasets,
+                        time_base=None,
+                        InterpolationStrategyImpl=None,
                         time_column='time', value_columns=("val",), verbose=False) -> pd.DataFrame:
     """
+    For a given dict of DataFrames (dict of 'Data Label' -> DataFrame), the data alignment is performed for the
+    provided data sets values (according to provided value columns) and the provided new time base
+    (first dataset's time or the external provided time base) using of provided interpolation strategy
+    (default is LinearInterpolationStrategy)
 
     :param dict_of_datasets:
-    :param time_base:
+    :param time_base: default None,
     :param InterpolationStrategyImpl:
-    :param time_column:
-    :param value_columns:
-    :param verbose:
-    :return:
+    :param time_column: default 'time'
+    :param value_columns: default 'val'
+    :param verbose: default False, prints out the progress on the computation
+    :return: pandas DataFrame with one time column and value columns for each data label
     """
     if InterpolationStrategyImpl is None:
         raise ValueError('Cannot align data sets without a valid InterpolationStrategy')
@@ -102,12 +107,23 @@ def alignManyDataFrames(dict_of_datasets,
     return returnDF
 
 
-def addMovingAverage(dataset, window=10):
+def calculateMovingAverage(dataset, window=10,
+                           time_column='secs_nanos', value_columns=('val',), verbose=False):
     """
-    :param dataset:
-    :param window:
-    :return:
+    Modifies the the provided data set, by adding extra columns for mean time and mean values.
+
+    :param dataset: data set to update
+    :param value_columns:
+    :param time_column:
+    :param window: default 10s
+    :param verbose:
+    :return: None
     """
-    dataset['mean_time'] = pd.to_datetime((dataset['secs'] + dataset['nanos'] / 1e9).rolling(window=window).mean(),
-                                          unit='s')
-    dataset['mean_value'] = dataset['val'].rolling(window=window).mean()
+    df = pd.DataFrame()
+    df[time_column] = dataset[time_column]
+    df['mean_time'] = pd.to_datetime((dataset[time_column]).rolling(window=window).mean(), unit='s')
+    for one_value_column in value_columns:
+        if verbose: print("Column \'{}\' applied with {}s moving average".format(one_value_column, window))
+        df['mean_'+one_value_column] = dataset[one_value_column].rolling(window=window).mean()
+    df.dropna(inplace=True)
+    return df

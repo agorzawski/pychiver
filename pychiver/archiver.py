@@ -29,7 +29,7 @@ Authors:
 import os
 import warnings
 
-from .calculations import LinearInterpolationStrategy, alignManyDataFrames
+from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage
 from .endpoints import JsonEndPointArchiver
 import pandas
 
@@ -79,13 +79,11 @@ class Archiver:
 
     def getAligned(self, PVS: list, start_date, end_date=None,
                    time_base=None, strategy=LinearInterpolationStrategy,
-                   entries_limit=None, time_column="secs", value_columns=("val",),
+                   entries_limit=None, time_column="secs_nanos", value_columns=("val",),
                    verbose=False) -> pandas.DataFrame:
         """
         Extracts PVs and aligns them to the timestamps of the first PV in the list or separately provided time base.
         Uses the provided InterpolationStrategy (default one LinearInterpolationStrategy)
-
-        NOTE: For now the new time base is expressed only in full seconds, i.e. the fractional part is omitted.
 
         :param PVS: list of PVS (string) to be extracted
         :param start_date:
@@ -98,16 +96,38 @@ class Archiver:
         :param verbose: default False
         :return: a DataFrame with all PVS and their values
         """
-
         dict_of_dataframes = self.get(PVS, start_date, end_date=end_date,
                                       entries_limit=entries_limit, verbose=verbose)
         if not isinstance(dict_of_dataframes, dict):
             raise ValueError('Wrong data format provided. Dict of pandas.DataFrames expected, {} provided'. \
                              format(dict_of_dataframes.__class__))
-        # TODO add support for the nanos column (combine for the nanos, and provide the scaling factor 1e9)
-        return alignManyDataFrames(dict_of_dataframes, time_base=time_base,
-                                   time_column=time_column, value_columns=value_columns,
-                                   InterpolationStrategyImpl=strategy, verbose=verbose)
+        return alignDataFrames(dict_of_dataframes, time_base=time_base,
+                               time_column=time_column, value_columns=value_columns,
+                               InterpolationStrategyImpl=strategy, verbose=verbose)
+
+    def getMovingAverage(self, PV, start_date, end_date=None, entries_limit=None, window=10,
+                         time_column="secs_nanos", value_columns=("val",), verbose=False) -> pandas.DataFrame:
+        """
+        Retrieves the data for a given PV and calculates the moving average for a selected window.
+        The resulting dataframe is cleared from all NaN cases.
+
+        :param PV:
+        :param start_date:
+        :param end_date:
+        :param entries_limit:
+        :param window:
+        :param time_column:
+        :param value_columns:
+        :param verbose:
+        :return:
+        """
+        if isinstance(PV, list) or isinstance(PV, tuple) or isinstance(PV, dict):
+            raise ValueError('Cannot handle more than one PV at the time. \
+                                Use getAligned together with calculations.calculateMovingAverage')
+        df = self.get(PV, start_date, end_date=end_date, entries_limit=entries_limit, verbose=verbose)
+        return calculateMovingAverage(df[PV], window=window,
+                                      time_column=time_column, value_columns=value_columns,
+                                      verbose=verbose)
 
     def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
         """
