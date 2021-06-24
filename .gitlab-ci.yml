@@ -1,0 +1,17 @@
+image: "python:3.7"
+
+before_script:
+  - python --version
+  - pip install -r requirements.txt
+
+stages:
+#  - Static Analysis
+  - test
+
+unittest:
+  stage: test
+  script:
+    - pip install coverage
+    - python -m unittest -v
+    - coverage run -m unittest -v
+    - coverage report
