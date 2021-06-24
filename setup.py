@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='pychiver',
-     version='0.2.1',
+     version='0.3.0',
      author="Arek Gorzawski",
      author_email="arek.gorzawski@ess.eu",
      description="A python wrapper for EPICS archiver",
@@ -17,7 +17,8 @@ setuptools.setup(
           'requests',
           'pandas',
           'matplotlib',
-          'numpy'
+          'numpy',
+#          'epicsarchiver'
      ],
      packages=setuptools.find_packages(),
  )
