@@ -6,6 +6,7 @@ Authors:
 """
 
 from .timeutils import validateTimeStamps
+from .codes import EpicsStatus, EpicsSeverity
 import pandas
 import json
 import requests
@@ -47,6 +48,8 @@ class JsonEndPointArchiver(EndPoint):
                                                           start_date, end_date)
         json_data = requests.get(nth_url).json()[0]['data']
         dataset = pandas.read_json(json.dumps(json_data))
+        dataset['status_label'] = dataset.apply(lambda row: EpicsStatus(row['status']), axis=1)
+        dataset['severity_label'] = dataset.apply(lambda row: EpicsSeverity(row['severity']), axis=1)
         dataset['secs_nanos'] = dataset['secs'] + dataset['nanos'] / 1e9
         dataset['time'] = pandas.to_datetime(dataset['secs_nanos'], unit='s')
         return dataset
