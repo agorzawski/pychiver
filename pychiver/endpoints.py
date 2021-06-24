@@ -31,12 +31,18 @@ class JsonEndPointArchiver(EndPoint):
     """
     JSON end point implementation for the ESS Archiver
     """
+
+    def __init__(self, archiver_url=None):
+        super().__init__(archiver_url)
+        self.archiver_url_data = '{}:17668/retrieval/data/getData.json'.format(archiver_url)
+        self.archiver_url_mgmt = '{}:17665/mgmt/bpl'.format(archiver_url)
+
     def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None) -> pandas.DataFrame:
         start_date, end_date = validateTimeStamps(start_date, end_date)
         entries = self._countEntries(PV, start_date, end_date)
         if entries_limit is None:
             entries_limit = entries
-        nth_url = '{}?pv=nth_{}({})&from={}&to={}'.format(self.archiver_url, int(entries // entries_limit),
+        nth_url = '{}?pv=nth_{}({})&from={}&to={}'.format(self.archiver_url_data, int(entries // entries_limit),
                                                           PV,
                                                           start_date, end_date)
         json_data = requests.get(nth_url).json()[0]['data']
@@ -54,9 +60,22 @@ class JsonEndPointArchiver(EndPoint):
         :param end_date:
         :return:
         """
-        count_url = '{}?pv=count({})&from={}&to={}'.format(self.archiver_url, PV, start_date, end_date)
+        count_url = '{}?pv=count({})&from={}&to={}'.format(self.archiver_url_data, PV, start_date, end_date)
         json_data = requests.get(count_url).json()[0]['data']
         entries = 0
         for i in json_data:
             entries += i['val']
         return entries
+
+    def getPVStatus(self, PV) -> dict:
+        """
+        :param PV:
+        :return:
+        """
+        if isinstance(PV, str):
+            PV = (PV,)
+        url_to_check = '{}/getPVStatus?pv='.format(self.archiver_url_mgmt)
+        for onePV in PV:
+            url_to_check += onePV+","
+        returnData = requests.get(url_to_check).json()
+        return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}

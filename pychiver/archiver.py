@@ -144,5 +144,4 @@ class Archiver:
         :param PV:
         :return: dict of PV to its data
         """
-        # TODO add simple PVInfo return
-        raise NotImplementedError("Not implemented yet")
+        return self.archiver.getPVStatus(PV)
