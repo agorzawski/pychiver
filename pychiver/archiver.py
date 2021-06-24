@@ -29,7 +29,7 @@ Authors:
 import os
 import warnings
 
-from .calculations import LinearInterpolationStrategy
+from .calculations import LinearInterpolationStrategy, alignManyDataFrames
 from .endpoints import JsonEndPointArchiver
 import pandas
 
@@ -78,21 +78,36 @@ class Archiver:
                                                    entries_limit=entries_limit)}
 
     def getAligned(self, PVS: list, start_date, end_date=None,
-                   time_base=None, strategy=LinearInterpolationStrategy, entries_limit=None):
+                   time_base=None, strategy=LinearInterpolationStrategy,
+                   entries_limit=None, time_column="secs", value_columns=("val",),
+                   verbose=False) -> pandas.DataFrame:
         """
-        Extracts PVs and aligns to the timestamps of the first PV in the list or separatly provided time base.
+        Extracts PVs and aligns them to the timestamps of the first PV in the list or separately provided time base.
+        Uses the provided InterpolationStrategy (default one LinearInterpolationStrategy)
 
+        NOTE: For now the new time base is expressed only in full seconds, i.e. the fractional part is omitted.
 
         :param PVS: list of PVS (string) to be extracted
         :param start_date:
         :param end_date:
-        :param time_base: New time base to use, default None, then first PV timestamps' in the set is used
+        :param time_base: New time base to use, default None, then first PV timestamps' in the set is used. If new provided, use epoch seconds.
         :param strategy: Interpolation strategy to be used for the aligning, default LinearInterpolationStrategy
-        :param entries_limit:
-        :return: dict of DataFrames
+        :param entries_limit: optional,
+        :param time_column: optional,
+        :param value_columns: optional,
+        :param verbose: default False
+        :return: a DataFrame with all PVS and their values
         """
-        raise NotImplementedError("Not implemented yet")
-        # TODO finish first implementation for the interpolating with the provided time
+
+        dict_of_dataframes = self.get(PVS, start_date, end_date=end_date,
+                                      entries_limit=entries_limit, verbose=verbose)
+        if not isinstance(dict_of_dataframes, dict):
+            raise ValueError('Wrong data format provided. Dict of pandas.DataFrames expected, {} provided'. \
+                             format(dict_of_dataframes.__class__))
+        # TODO add support for the nanos column (combine for the nanos, and provide the scaling factor 1e9)
+        return alignManyDataFrames(dict_of_dataframes, time_base=time_base,
+                                   time_column=time_column, value_columns=value_columns,
+                                   InterpolationStrategyImpl=strategy, verbose=verbose)
 
     def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
         """
