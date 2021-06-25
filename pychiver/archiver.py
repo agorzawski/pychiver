@@ -67,15 +67,17 @@ class Archiver:
         if isinstance(PV, tuple) or isinstance(PV, list):
             dataToReturn = {}
             for onePV in PV:
-                if verbose:
-                    print('Collecting data for', onePV)
-                dataToReturn[onePV] = self.archiver.getDataForPV(onePV, start_date=start_date,
-                                                                 end_date=end_date,
-                                                                 entries_limit=entries_limit, )
+                if verbose: print('Collecting data for', onePV)
+                dataToReturn[onePV] = self._get(onePV, start_date=start_date, end_date=end_date,
+                                                entries_limit=entries_limit, verbose=verbose)[0]
             return dataToReturn
         else:
-            return {PV: self.archiver.getDataForPV(PV, start_date=start_date, end_date=end_date,
-                                                   entries_limit=entries_limit)}
+            return {PV: self._get(PV, start_date=start_date, end_date=end_date,
+                                  entries_limit=entries_limit, verbose=verbose)[0]}
+
+    # TODO consider a separate call for waveforms, 
+    #  def getWaveform(self, onePV: str, start_date, end_date=None,):
+    #       pass
 
     def getAligned(self, PVS: list, start_date, end_date=None,
                    time_base=None, strategy=LinearInterpolationStrategy,
@@ -124,7 +126,10 @@ class Archiver:
         if isinstance(PV, list) or isinstance(PV, tuple) or isinstance(PV, dict):
             raise ValueError('Cannot handle more than one PV at the time. \
                                 Use getAligned together with calculations.calculateMovingAverage')
-        df = self.get(PV, start_date, end_date=end_date, entries_limit=entries_limit, verbose=verbose)
+        df, isWaveform = self._get(PV, start_date, end_date=end_date, entries_limit=entries_limit, verbose=verbose)
+        if isWaveform:
+            warnings.warn('Moving average over the waveform is not implemented! Returning simple DataForm')
+            return df
         return calculateMovingAverage(df[PV], window=window,
                                       time_column=time_column, value_columns=value_columns,
                                       verbose=verbose)
@@ -145,3 +150,17 @@ class Archiver:
         :return: dict of PV to its data
         """
         return self.archiver.getPVStatus(PV)
+
+    def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None, verbose=False, waveform_alert=True) \
+            -> pandas.DataFrame:
+        isWaveform = False
+        df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit)
+        try:
+            if len(df) > 0 and len(df['val'][0]):
+                isWaveform = True
+                if waveform_alert: warnings.warn("The PV \'{}\' you have extracted is type of WAVEFORM with {} samples".
+                                                 format(onePV, len(df['val'][0])))
+        except TypeError:
+            pass  # This error is thrown on scalar types, due to len(df['val'])
+
+        return df, isWaveform

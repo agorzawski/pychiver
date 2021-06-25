@@ -1,4 +1,8 @@
 
+##0.3.1
+- included description of the EPICS status codes
+- included warning when extracting the waveforms
+
 ##0.3.0
 - improved the `archiver.get()`
 - introduced `archiver.getAligned()`
