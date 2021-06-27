@@ -1,9 +1,14 @@
 # py(ar)chiver
+> **DISCLAIMER**: This is a prototype, plenty of bugs can occur
 
-A python package providing a wrapped options **for data access** in the EPICS Archiver.
-Additionally, some tools are provided like data aligning, moving average or data source (PVs) status checks.
+A python package providing a wrapped service options:
+- **for archived data access** in the *EPICS Archiver*.
+  - Additionally, some tools are provided for **data modification**  like data aligning, moving average or data source (PVs) status checks.
+- **for saved configurations and snapshots** in the EPICS *SaveAndRestore*
 
-## Examples
+
+## Examples Archiver
+> **NOTE**: Check `examples`, where interactive notebooks are.
 
 To setup, all one needs is the following call:
 ```python
@@ -51,20 +56,53 @@ data = archiver.check("RFQ-010:RFS-Kly-110:Oil-Tmp")
   'status': 'Being archived'}}
 ```
 
-### Get Waveform Data
+
+## Examples *Save and Restore*
+> **NOTE**: Check `examples`, where interactive notebooks are.
+
+To setup, all one needs is the following call:
 ```python
-#TODO add example
+from pychiver.saveandrestore import SaveAndRestore
+sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se")
 ```
 
-### TimeStamp Format
+To get all configuration Nodes:
+```python
+configurations = sar.getConfigurations()
+# returns a dict of NameOfConfig to Configuration
+```
+
+To get all snapshots for a given configuration:
+
+```python
+sar.getSnapshots(configName='NameOfConfig')
+# returns a dict of NameOfConfig to Configuration
+```
+To compare:
+```python
+status = sar.compare(snapshot=some_snapshot)
+#returns pandas.DataFrame with setPoint values and current values and with deltas
+```
+To restore:
+```python
+status = sar.restore(snapshot=some_snapshot)
+#returns 0 if all restored, rises ValueError, EpicsError in case of problems
+```
+To create new snapshot:
+```python
+sar.save(config=some_config, snapshot=some_snapshot, new_name='SomeNewName')
+# TODO WIP still under implementation
+```
+
+## TimeStamp Format
 *pychiver* supports the following formats:
 1) as `datetime` objects, eg:  `datetime.now()`, `datetime.strptime('2021-02-28 13:13:13', DATE_FORMAT)`
 1) as plain text e.g. `'2021-02-28 13:13:13'`, following the format `%Y-%m-%d %H:%M:%S`
 
-## Extra configuration
-Setup of the environmental variable is possible. 
-`EPICS_ARCHIVER_URL` can be set to the desired instance.
-
+## Extra environmental configuration
+Setup of the environmental variable is possible, the following can be set for the desired instance
+ - `EPICS_ARCHIVER_URL` 
+ - `SAVE_AND_RESTORE_URL`
 
 ## Installation
 

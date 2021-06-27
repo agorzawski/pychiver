@@ -1,3 +1,8 @@
+##0.4.0
+- added first support for the save and restore
+  - configuration/snapshots lists 
+  - snapshot details
+  - snapshot restore (WIP)
 
 ##0.3.1
 - included description of the EPICS status codes
