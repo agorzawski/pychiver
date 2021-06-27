@@ -18,6 +18,7 @@ setuptools.setup(
           'pandas',
           'matplotlib',
           'numpy',
+          'pyepics',
 #          'epicsarchiver'
      ],
      packages=setuptools.find_packages(),

@@ -1,5 +1,5 @@
 """
-PyChiver -- A Python wrapping of ESS Archiver
+PyChiver -- A Python wrapping of ESS Archiver and Save and Restore
 
 Copyright (c) ESS 2021
 
@@ -75,7 +75,7 @@ class Archiver:
             return {PV: self._get(PV, start_date=start_date, end_date=end_date,
                                   entries_limit=entries_limit, verbose=verbose)[0]}
 
-    # TODO consider a separate call for waveforms, 
+    # TODO consider a separate call for waveforms,
     #  def getWaveform(self, onePV: str, start_date, end_date=None,):
     #       pass
 
