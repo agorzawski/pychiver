@@ -37,7 +37,9 @@ import pickle
 
 
 class SaveAndRestoreEndPoint:
-
+    """
+    An abstract class for the Save and Restore end point
+    """
     def __init__(self, service_url=None):
         if service_url is None:
             raise ValueError('Cannot start the SAVE AND RESTORE service, please provide an url!')
@@ -45,6 +47,9 @@ class SaveAndRestoreEndPoint:
 
 
 class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
+    """
+    JMASAR EndPoint following the REST API exposed by the https://gitlab.esss.lu.se/ics-software/jmasar-service
+    """
 
     def __init__(self, service_url=None):
         super().__init__(service_url=service_url)
@@ -98,7 +103,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
 class SaveAndRestore:
     """
-    Save and Restore client implementation. Exposes the
+    Save and Restore client implementation. Exposes the main functionality.
+    Allows to get configurations and snapshots for a given configuration.
+
+    All snapshots have DataFrame representation
 
     WIP: First implementation of the abstraction for the Save And Restore interface using JMASAR JSON endpoint.
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
@@ -106,9 +114,16 @@ class SaveAndRestore:
 
     def __init__(self, service_url=None, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None):
         """
-        :param service_url:
-        :param DefaultImplementation:
+        Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
+
+        If cache file set to True, client will use the configurations setup stored in the local file.
+        If local file will not be found, the first time user will call getConfigurations() a local file will be created.
+
+        :param service_url: required, an url for the service
+        :param DefaultImplementation: optional, default is JSONSaveAndRestoreEndPoint
+        :param cacheFile: optional, default is False
         """
+        warnings.warn('This is a prototype, use with caution!')
         self.service = DefaultImplementation(service_url=service_url)
         self.epics = epics
         self.cachedConfigurations = {}
@@ -120,6 +135,13 @@ class SaveAndRestore:
                 print('No file {} found. Skipping loading from cache.'.format(self.cacheFile))
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
+        """
+        Returns all snapshots for a given config. Either config (SARConfig) or configUniqueId (str) needs to be provided
+
+        :param config:
+        :param configUniqueId:
+        :return: a dict of SnapshotsName -> SARSnapshot
+        """
         print('Getting available snapshots for config ' + configUniqueId)
         # TODO add full path to the snapshot key
         # TODO add support for full configs
@@ -135,6 +157,12 @@ class SaveAndRestore:
         return toReturn
 
     def getConfigurations(self, useCache=False) -> dict:
+        """
+        Returns all configurations found in the system. If useCache is True, it retrieves it from the local file.
+
+        :param useCache: optional, default False
+        :return:
+        """
         configurations = {}
         if not useCache:
             self.service.getConfigurations(self.service.getRoot().uniqueId, configurations)
@@ -148,32 +176,47 @@ class SaveAndRestore:
             return configurations
 
     def getConfiguration(self, name=None) -> SARConfig:
-        # TODO
-        pass
+        # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
+        # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
+        raise NotImplementedError('Not implemented yet!')
 
     def compare(self, snapshot: SARSnapshot = None) -> pandas.DataFrame:
-        values = epics.caget_many(pvlist=snapshot.getPVs()) #TODO chceck order PVs
-        #print(values)
+        """
+        Provides the way of comparing a snapshot to the live values, that are retrieved by pyepics.
+
+        :param snapshot:
+        :return: DataFrame for given snapshot, enlarged with live_values and deltas to the setpoitns
+        """
+        # TODO add some error support
+        values = self.epics.caget_many(pvlist=snapshot.getPVs()) #TODO chceck order PVs
+        # print(values)
         df = snapshot.getStoredValues()
         df['live_values'] = values
         try:
             df['delta'] = df['stored_setpoint'] - df['live_values']
         except:
-            warnings.warn("Some error occured during the delta calculation, skipping")
+            warnings.warn("Some error occurred during the delta calculation, skipping")
         return df
 
     def restore(self, snapshot: SARSnapshot = None):
+        """
+        Sets the PVs to their values as provided in the snapshot
+
+        :param snapshot:
+        :return:
+        """
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError('For restore an SARSnapshot is required!')
-        # TODO get values from snapshot
+        # TODO get PV names/values from snapshot
         pvsToPut = []
         valuesToPut = []
+        # TODO add some error support
         self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut)
         return 0
 
     def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None):
-        # TODO to be implemented
-        pass
+        # TODO to be implemented, to be found in the REST Api how to do it
+        raise NotImplementedError('Not implemented yet!')
 
     def _status(self):
         self.service.status()

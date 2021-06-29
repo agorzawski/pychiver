@@ -10,7 +10,7 @@ A python package providing a wrapped service options:
 ## Examples Archiver
 > **NOTE**: Check `examples`, where interactive notebooks are.
 
-To setup, all one needs is the following call:
+To set up the client, all one needs is the following call:
 ```python
 from pychiver.archiver import Archiver
 archiver = Archiver(archiver_url='http://archiver-01.tn.esss.lu.se')
@@ -25,7 +25,7 @@ pvs = ("RFQ-010:RFS-Kly-110:Oil-Tmp", "RFQ-010:RFS-Kly-110:Coll-WtrC-Flw")
 
 ```python
 data = archiver.get(pvs, start_date=start, end_date=end)
-# returns dict of PV -> dataframes
+# returns dict of PV -> DataFrame
 ```
 
 ### Get more PVS at once and align them together
@@ -60,7 +60,7 @@ data = archiver.check("RFQ-010:RFS-Kly-110:Oil-Tmp")
 ## Examples *Save and Restore*
 > **NOTE**: Check `examples`, where interactive notebooks are.
 
-To setup, all one needs is the following call:
+To set up the client, all one needs is the following call:
 ```python
 from pychiver.saveandrestore import SaveAndRestore
 sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se")
