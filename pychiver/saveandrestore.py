@@ -166,14 +166,11 @@ class SaveAndRestore:
         configurations = {}
         if not useCache:
             self.service.getConfigurations(self.service.getRoot().uniqueId, configurations)
-            if useCache:
-                self.cacheFile = configurations
-            # TODO fix the caching issues
-            # pickle.dump(configurations, open(self.cacheFile, 'wb+'))
+            self._updateCache(configurations)
             return configurations
         else:
             print(self.cachedConfigurations)
-            return configurations
+            return self.cachedConfigurations
 
     def getConfiguration(self, name=None) -> SARConfig:
         # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
@@ -188,7 +185,7 @@ class SaveAndRestore:
         :return: DataFrame for given snapshot, enlarged with live_values and deltas to the setpoitns
         """
         # TODO add some error support
-        values = self.epics.caget_many(pvlist=snapshot.getPVs()) #TODO chceck order PVs
+        values = self.epics.caget_many(pvlist=snapshot.getPVs())  # TODO check order PVs
         # print(values)
         df = snapshot.getStoredValues()
         df['live_values'] = values
@@ -217,6 +214,11 @@ class SaveAndRestore:
     def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None):
         # TODO to be implemented, to be found in the REST Api how to do it
         raise NotImplementedError('Not implemented yet!')
+
+    def _updateCache(self, newConfiguration):
+        import copy
+        self.cachedConfigurations = copy.deepcopy(newConfiguration)
+        pickle.dump(self.cachedConfigurations, open(self.cacheFile, 'wb+'))
 
     def _status(self):
         self.service.status()

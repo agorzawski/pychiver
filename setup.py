@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='pychiver',
-     version='0.3.1',
+     version='0.4.0',
      author="Arek Gorzawski",
      author_email="arek.gorzawski@ess.eu",
      description="A python wrapper for EPICS archiver",
