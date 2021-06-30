@@ -218,7 +218,8 @@ class SaveAndRestore:
     def _updateCache(self, newConfiguration):
         import copy
         self.cachedConfigurations = copy.deepcopy(newConfiguration)
-        pickle.dump(self.cachedConfigurations, open(self.cacheFile, 'wb+'))
+        if self.cacheFile is not None:
+            pickle.dump(self.cachedConfigurations, open(self.cacheFile, 'wb+'))
 
     def _status(self):
         self.service.status()

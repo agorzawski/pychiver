@@ -7,7 +7,7 @@ A python package providing a wrapped service options:
 - **for saved configurations and snapshots** in the EPICS *SaveAndRestore*
 
 
-## Examples Archiver
+## Examples *Archiver*
 > **NOTE**: Check `examples`, where interactive notebooks are.
 
 To set up the client, all one needs is the following call:
