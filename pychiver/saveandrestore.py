@@ -25,15 +25,13 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
 
-import json
-import warnings
+from .sardomain import *
 
-import pandas
 import requests
 import epics
-import datetime
-from .sardomain import *
+import os
 import pickle
+import warnings
 
 
 class SaveAndRestoreEndPoint:
@@ -42,7 +40,8 @@ class SaveAndRestoreEndPoint:
     """
     def __init__(self, service_url=None):
         if service_url is None:
-            raise ValueError('Cannot start the SAVE AND RESTORE service, please provide an url!')
+            raise ValueError('SaveAndRestore service URL was not provided nor set in the env. \
+                                Set SAVE_AND_RESTORE_URL in your env.')
         self.service_url = service_url
 
 
@@ -52,6 +51,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
     """
 
     def __init__(self, service_url=None):
+        if service_url is None:
+            service_url = os.getenv('SAVE_AND_RESTORE_URL', None)
         super().__init__(service_url=service_url)
         self.service_url_root = '{}/root'.format(self.service_url)
         self.url_config_snapshot = '{}/config/{{}}/snapshots'.format(self.service_url)
