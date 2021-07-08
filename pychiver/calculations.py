@@ -4,6 +4,8 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
 import warnings
+from enum import Enum
+
 import numpy as np
 import pandas as pd
 
@@ -40,10 +42,23 @@ class LinearInterpolationStrategy(InterpolationStrategy):
         return np.interp(self.baseTs, xs, ys)
 
 
+class LastAcquiredValueInterpolationStrategy(InterpolationStrategy):
+
+    def getValues(self, xs: list, ys: list) -> list:
+        """
+        Return new values that are aligned with the base Time Stamps
+        :param xs:
+        :param ys:
+        :return:
+        """
+        # TODO implement as area/last acquire value interpolation
+        raise NotImplementedError('Not implemented yet')
+
+
 def alignDataFrames(dict_of_datasets,
-                        time_base=None,
-                        InterpolationStrategyImpl=None,
-                        time_column='time', value_columns=("val",), verbose=False) -> pd.DataFrame:
+                    time_base=None,
+                    InterpolationStrategyImpl=None,
+                    time_column='time', value_columns=("val",), verbose=False) -> pd.DataFrame:
     """
     For a given dict of DataFrames (dict of 'Data Label' -> DataFrame), the data alignment is performed for the
     provided data sets values (according to provided value columns) and the provided new time base
@@ -124,6 +139,31 @@ def calculateMovingAverage(dataset, window=10,
     df['mean_time'] = pd.to_datetime((dataset[time_column]).rolling(window=window).mean(), unit='s')
     for one_value_column in value_columns:
         if verbose: print("Column \'{}\' applied with {}s moving average".format(one_value_column, window))
-        df['mean_'+one_value_column] = dataset[one_value_column].rolling(window=window).mean()
+        df['mean_' + one_value_column] = dataset[one_value_column].rolling(window=window).mean()
     df.dropna(inplace=True)
     return df
+
+
+class Method(Enum):
+    AND = 0
+    OR = 1
+    XOR = 2
+
+
+def compareTwoBooleanArrays(array1, array2, method=Method.AND):
+    """
+
+    :param array1:
+    :param array2:
+    :param method:
+    :return:
+    """
+    if not isinstance(method, Method):
+        raise ValueError('The method you provided is not an instance of Method in this package!')
+    if method == Method.AND:
+        return np.bitwise_and(array1, array2)
+    if method == Method.OR:
+        return np.bitwise_or(array1, array2)
+    if method == Method.XOR:
+        return np.bitwise_xor(array1, array2)
+

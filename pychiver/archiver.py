@@ -134,6 +134,17 @@ class Archiver:
                                       time_column=time_column, value_columns=value_columns,
                                       verbose=verbose)
 
+    def getBooleanSignalsCompared(self, PVs: list, start_date, end_date=None,
+                                  index_of_reference_PV=0,
+                                  compare_edge=0, # TODO create an enum RISING FALLING
+                                  tolerance_in_seconds=1) -> pandas.DataFrame:
+        if len(PVs) < 2:
+            raise ValueError('At least two signals expected to compare to')
+        # TODO implement the core: import archiver PVs, perform smart align (including the tolerance)
+        #  resulting arrays compare bitwise
+        print(self.archiver_url)
+        raise NotImplementedError('Not implemented yet')
+
     def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
         """
         Returns data associated with the PulseId
