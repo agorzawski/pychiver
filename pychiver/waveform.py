@@ -19,7 +19,9 @@ class WaveformCollector(ABC):
     """
 
     def __init__(self, PV: str,
-                 roi_indexes: tuple = None):
+                 roi_indexes: tuple = None,
+                 callback=None,
+                 callback_delay_in_seconds=1):
         """
         :param PV: name of the PV
         :param roi_indexes: a tuple with start index and the end index of the ROI calculation,
@@ -29,6 +31,12 @@ class WaveformCollector(ABC):
             raise ValueError('Use one PVWaveFormCollector per one PV')
         self._PV = PV
         self._roi_indexes = roi_indexes
+        if callback is None:
+            warnings.warn('You have not defined the callback function! dev>null will be used.')
+            callback = self._null_callback
+        self._callback = callback
+        self._callback_delay = timedelta(seconds=callback_delay_in_seconds)
+        self._callback_last_call = datetime.now()
         self._dataframe = pandas.DataFrame(columns={'time', 'secs', 'secs_nanos', 'val'})
         # TODO make conf with columns names across archiver and waveforms dataframes
 
@@ -55,10 +63,13 @@ class WaveformCollector(ABC):
         else:
             df['val_roi'] = df.apply(lambda row: math.nan)
 
+    def _null_callback(self, **kwargs):
+        pass # an empty callback
+
 
 class PVWaveformCollector(WaveformCollector):
 
-    def __init__(self, PV: str, callback=None, callback_delay_in_seconds=1, data_buffer=3*60, **kwargs):
+    def __init__(self, PV: str, data_buffer=3*60, **kwargs):
         """
         Initialises PV waveform data collector. It uses camonitor from pyepics.
 
@@ -68,14 +79,8 @@ class PVWaveformCollector(WaveformCollector):
         :param data_buffer: default 180s,
         """
         super().__init__(PV, **kwargs)
-        if callback is None:
-            warnings.warn('You have not defined the callback function! dev>null will be used.')
-            callback = self._null_callback
-        self._callback = callback
-        self._callback_delay = timedelta(seconds=callback_delay_in_seconds)
-        self._callback_last_call = datetime.now()
         self._data_buffer = data_buffer
-        epics.camonitor(self._PV, callback=self._execute_callback, connection_timeout=1)
+        epics.camonitor(self._PV, callback=self._execute_callback)
 
     def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
         timestamp = datetime.fromtimestamp(kwargs["timestamp"])
@@ -87,15 +92,13 @@ class PVWaveformCollector(WaveformCollector):
         # drop older than collector's buffer
         oldest_to_keep = timestamp - timedelta(seconds=self._data_buffer)
         self._dataframe.drop(self._dataframe[self._dataframe['time'] < oldest_to_keep].index, inplace=True)
+        # check if call the external callback
         checkTime = datetime.now()
         if checkTime > self._callback_last_call + self._callback_delay:
             self._callback_last_call = checkTime
             self._callback(PV=self._PV, dataframe=self.getAllWaveforms(), lastCheck=checkTime)
         else:
             pass
-
-    def _null_callback(self, **kwargs):
-        pass # an empty callback
 
 
 class ArchiverWaveformCollector(WaveformCollector):
@@ -114,7 +117,7 @@ class ArchiverWaveformCollector(WaveformCollector):
         self._archiver = Archiver(archiver_url=archiver_url)
         self._dataframe = self._fetch_values(PV, start_date=start_date, end_date=end_date)
 
-        # TODO initialize the auto refresh
+        # TODO initialize the auto refresh to call self._callback()
 
     def _fetch_values(self, PV, start_date, end_date=None):
         return self._archiver.getWaveform(PV, start_date=start_date, end_date=end_date)
