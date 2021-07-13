@@ -76,7 +76,7 @@ class Archiver:
                                   entries_limit=entries_limit, verbose=verbose)[0]}
 
     # TODO consider a separate call for waveforms,
-    #  def getWaveform(self, onePV: str, start_date, end_date=None,):
+    #  def getWaveform(self, onePV: str, start_date, end_date=None,) -> waveform.ArchiverCollector:
     #       pass
 
     def getAligned(self, PVS: list, start_date, end_date=None,
@@ -141,6 +141,7 @@ class Archiver:
         :return:
         """
         # TODO add when timing data in the archiver
+        # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
     def check(self, PV: str):
