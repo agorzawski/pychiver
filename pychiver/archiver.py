@@ -75,9 +75,19 @@ class Archiver:
             return {PV: self._get(PV, start_date=start_date, end_date=end_date,
                                   entries_limit=entries_limit, verbose=verbose)[0]}
 
-    # TODO consider a separate call for waveforms,
-    #  def getWaveform(self, onePV: str, start_date, end_date=None,) -> waveform.ArchiverCollector:
-    #       pass
+    def getWaveform(self, onePV: str, start_date, end_date=None, verbose=False) -> pandas.DataFrame:
+        """
+        Returns an pandas DataFrame that contains a waveform
+
+        :param onePV: PV to be extracted
+        :param start_date:
+        :param end_date: default None => now()
+        :param verbose: default False, if True the processing printout is provided
+        :return:
+        """
+        if not isinstance(onePV, str):
+            raise ValueError('Only one waveform at the time! Too many or none PVs provided.')
+        return self._get(onePV, start_date=start_date, end_date=end_date, verbose=verbose, waveform_alert=False)[0]
 
     def getAligned(self, PVS: list, start_date, end_date=None,
                    time_base=None, strategy=LinearInterpolationStrategy,
