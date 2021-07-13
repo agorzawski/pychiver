@@ -6,7 +6,7 @@ A python package providing a wrapped service options:
   - Simple data extraction for scalars and waveforms,
   - Some tools are provided for **data processing**  like data aligning, moving average or data source (PVs) status checks.
 - **for saved configurations and snapshots** in the EPICS *SaveAndRestore*
-- Extended **waveform support** extensive collectors for both: archiver and realtime subscriptions, see [WAVEFORM.md](WAVEFORM.md)
+- Extended **waveform support** with collectors for both: archiver and realtime subscriptions, see more in [WAVEFORM.md](WAVEFORM.md)
 
 ## Examples *Archiver*
 > **NOTE**: Check `examples`, where interactive notebooks are.

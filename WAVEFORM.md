@@ -16,7 +16,8 @@ PV = "RFQ-010:RFS-Kly-110:PwrFwd-Wave-PM"
 from pychiver.waveform import ArchiverWaveformCollector
 pvCollector = ArchiverWaveformCollector(PV=PV, 
                                         start_date=start_time, 
-                                        end_date=end_time)
+                                        end_date=end_time,
+                                        archiver_url='http://archiver-01.tn.esss.lu.se')
 print(pvCollector.getAllWaveforms())
 ```
 
