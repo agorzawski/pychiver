@@ -3,9 +3,10 @@
 
 A python package providing a wrapped service options:
 - **for archived data access** in the *EPICS Archiver*.
-  - Additionally, some tools are provided for **data modification**  like data aligning, moving average or data source (PVs) status checks.
+  - Simple data extraction for scalars and waveforms,
+  - Some tools are provided for **data processing**  like data aligning, moving average or data source (PVs) status checks.
 - **for saved configurations and snapshots** in the EPICS *SaveAndRestore*
-
+- Extended **waveform support** with collectors for both: archiver and realtime subscriptions, see more in [WAVEFORM.md](WAVEFORM.md)
 
 ## Examples *Archiver*
 > **NOTE**: Check `examples`, where interactive notebooks are.
@@ -76,7 +77,7 @@ To get all snapshots for a given configuration:
 
 ```python
 sar.getSnapshots(configName='NameOfConfig')
-# returns a dict of NameOfConfig to Configuration
+# returns a dict of snapshot name to DataFrame with snapshot values
 ```
 To compare:
 ```python
@@ -85,6 +86,7 @@ status = sar.compare(snapshot=some_snapshot)
 ```
 To restore:
 ```python
+# TODO WIP still under implementation
 status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
 ```
