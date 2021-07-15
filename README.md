@@ -77,7 +77,7 @@ To get all snapshots for a given configuration:
 
 ```python
 sar.getSnapshots(configName='NameOfConfig')
-# returns a dict of NameOfConfig to Configuration
+# returns a dict of snapshot name to DataFrame with snapshot values
 ```
 To compare:
 ```python
@@ -86,6 +86,7 @@ status = sar.compare(snapshot=some_snapshot)
 ```
 To restore:
 ```python
+# TODO WIP still under implementation
 status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
 ```

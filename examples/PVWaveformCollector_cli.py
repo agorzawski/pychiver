@@ -9,7 +9,8 @@ def update_plot(**kwargs):
 
 pvCollector = PVWaveformCollector(PV="RFQ-010:RFS-EPR-110:Cur-Wave_",
                                   callback=update_plot,
-                                  callback_delay_in_seconds=2)
+                                  callback_delay_in_seconds=2,
+                                  roi_indexes=(1, 10))
 
 while True:
     sleep(0.1)

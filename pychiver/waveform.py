@@ -23,9 +23,12 @@ class WaveformCollector(ABC):
                  callback=None,
                  callback_delay_in_seconds=1):
         """
+        Constructor for the abstract WaveformCollector class.
+
         :param PV: name of the PV
-        :param roi_indexes: a tuple with start index and the end index of the ROI calculation,
-        numpy mean function is called
+        :param roi_indexes: definition of the Region Of Interest, required a tuple of indexes like (1,10)
+        :param callback: call back function to be call on data update
+        :param callback_delay_in_seconds: delay between two callbacks
         """
         if not isinstance(PV, str):
             raise ValueError('Use one PVWaveFormCollector per one PV')
@@ -41,20 +44,49 @@ class WaveformCollector(ABC):
         # TODO make conf with columns names across archiver and waveforms dataframes
 
     def getLastWaveform(self, timestamp=None, last=1) -> pandas.DataFrame:
+        """
+        Returns the last (n) waveforms from the collector's buffer.
+
+        :param timestamp: default None, if given, all waveforms younger than given date. NOTE: not implemented yet!
+        :param last: number of last waveforms to return
+        :return:
+        """
         if timestamp is None:
-            toReturn = self._dataframe.iloc[[-1]]
+            toReturn = self._dataframe.tail(last)
             self._get_ROI(toReturn)
             return toReturn
         else:
             # TODO use last available value as interpolation strategy
-            raise NotImplementedError('Only last acquisition available for now, with timestamp=None.')
+            raise NotImplementedError('Only last acquisition available for now, use: timestamp=None.')
 
     def getAllWaveforms(self) -> pandas.DataFrame:
+        """
+        :return: all buffered waveforms with additional column val_roi, that has an average value in the roi region
+        """
         toReturn = self._dataframe.copy()  # TODO to be checked how it goes with the performance
         self._get_ROI(toReturn)
         return toReturn
 
+    def getROITrace(self) -> pandas.DataFrame:
+        """
+        :return: a simplified dataframe only with the time and average value in the roi region
+        """
+        return self.getAllWaveforms()[['time', 'val_roi']]
+
+    def getColumns(self):
+        """
+        :return: column names that are available in the collector
+        """
+        return list(self._dataframe.columns)
+
     def updateROI(self, roi_indexes: tuple):
+        """
+        Updates current settings for ROI
+        :param roi_indexes: a tuple with start and end index
+        :return: None
+        """
+        if not isinstance(roi_indexes, tuple) and len(roi_indexes) != 2:
+            raise ValueError('Wrong ROI settings provided!')
         self._roi_indexes = roi_indexes
 
     def _get_ROI(self, df):
@@ -71,6 +103,8 @@ class PVWaveformCollector(WaveformCollector):
 
     def __init__(self, PV: str, data_buffer=3*60, **kwargs):
         """
+        Implementation of the WaveformCollector.
+
         Initialises PV waveform data collector. It uses camonitor from pyepics.
 
         :param PV: name of the pv
@@ -103,14 +137,15 @@ class PVWaveformCollector(WaveformCollector):
 
 class ArchiverWaveformCollector(WaveformCollector):
 
-    def __init__(self, PV, start_date, end_date=None, refresh_delay=1, archiver_url=None, **kwargs):
+    def __init__(self, PV, start_date, end_date=None, archiver_url=None, **kwargs):
         """
-        Initialises an Archiver collector that exposes utility methods for dealing with waveforms
+        Implementation of the WaveformCollector.
 
-        :param PV:
-        :param start_date:
-        :param end_date:
-        :param refresh_delay:
+        Initialises an Archiver collector that connects to the service, extracts the data and listens to any new incoming (NOT YET IMPLEMENTED!)
+
+        :param PV: name of the pv
+        :param start_date: start date
+        :param end_date: if None, it will used now()
         """
 
         super().__init__(PV, **kwargs)
