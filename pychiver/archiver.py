@@ -165,7 +165,7 @@ class Archiver:
         # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
-    def check(self, PV: str):
+    def check(self, PV: str) -> dict:
         """
         Provides information on the requested PV(s)
         :param PV:
@@ -176,7 +176,14 @@ class Archiver:
     def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None, verbose=False, waveform_alert=True) \
             -> pandas.DataFrame:
         isWaveform = False
-        df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit)
+        status = self.check(onePV)
+        df = self.archiver.getEmptyResult()
+        if 'Not' in status[onePV]['status']:
+            warnings.warn('Requested PV \'{}\' is NOT archived in {}, empty dataset will be returned.'
+                          .format(onePV, self.archiver_url))
+            pass
+        else:
+            df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit)
         try:
             if len(df) > 0 and len(df['val'][0]):
                 isWaveform = True

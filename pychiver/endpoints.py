@@ -27,6 +27,9 @@ class EndPoint:
     def getPVStatus(self, PV):
         raise NotImplementedError('Abstract implementation called, use concrete ones.')
 
+    def getEmptyResult(self):
+        raise NotImplementedError('Abstract implementation called, use concrete ones.')
+
 
 class JsonEndPointArchiver(EndPoint):
     """
@@ -82,3 +85,7 @@ class JsonEndPointArchiver(EndPoint):
             url_to_check += onePV+","
         returnData = requests.get(url_to_check).json()
         return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
+
+    def getEmptyResult(self):
+        return pandas.DataFrame(columns=('time', 'val','status_label', 'severity_label', 'secs_nanos', 'secs',
+                                         'nanos', 'status', 'severity'))
