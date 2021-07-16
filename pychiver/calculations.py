@@ -40,6 +40,36 @@ class LinearInterpolationStrategy(InterpolationStrategy):
         return np.interp(self.baseTs, xs, ys)
 
 
+class LastAcquiredValueInterpolationStrategy(InterpolationStrategy):
+
+    def getValues(self, xs: list, ys: list) -> list:
+        """
+        Return new values that are aligned with the base Time Stamps, and represent the closest (earlier) value
+        :param xs:
+        :param ys:
+        :return:
+        """
+        # TODO there might be more optimized way for that... any suggestions welcome
+        if len(xs) != len(ys):
+            raise ValueError('Provided arrays not of the same length!')
+        toReturn = []
+        for one in self.baseTs:
+            for i, x in enumerate(xs):
+                if x > one:
+                    idx = i-1 if i-1 > 0 else 0
+                    if i == len(xs)-1:
+                        idx = i
+                    toReturn.append(ys[idx])
+                    break
+                elif x == one:
+                    toReturn.append(ys[i])
+                    break
+                elif i == len(xs)-1:
+                    toReturn.append(ys[-1])
+                    break
+        return toReturn
+
+
 def alignDataFrames(dict_of_datasets,
                         time_base=None,
                         InterpolationStrategyImpl=None,
