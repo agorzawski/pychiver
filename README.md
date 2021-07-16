@@ -1,15 +1,15 @@
 # py(ar)chiver
-> **DISCLAIMER**: This is a prototype, plenty of bugs can occur
+> **DISCLAIMER**: This is an advanced prototype but still some bugs can occur
 
 A python package providing a wrapped service options:
 - **for archived data access** in the *EPICS Archiver*.
   - Simple data extraction for scalars and waveforms,
   - Some tools are provided for **data processing**  like data aligning, moving average or data source (PVs) status checks.
-- **for saved configurations and snapshots** in the EPICS *SaveAndRestore*
+- **for saved configurations and snapshots** in the EPICS *SaveAndRestore*, see more in [SAVEANDRESTORE.md](SAVEANDRESTORE.md)
 - Extended **waveform support** with collectors for both: archiver and realtime subscriptions, see more in [WAVEFORM.md](WAVEFORM.md)
+> **NOTE**: Check folder `examples`, where interactive notebooks and cli scripts are.
 
-## Examples *Archiver*
-> **NOTE**: Check `examples`, where interactive notebooks are.
+## Examples on *Archiver* in nutshell
 
 To set up the client, all one needs is the following call:
 ```python
@@ -24,6 +24,7 @@ pvs = ("RFQ-010:RFS-Kly-110:Oil-Tmp", "RFQ-010:RFS-Kly-110:Coll-WtrC-Flw")
 ```
 ### Get PV data
 
+Regardless if it is a scalar or waveform:
 ```python
 data = archiver.get(pvs, start_date=start, end_date=end)
 # returns dict of PV -> DataFrame
@@ -35,6 +36,7 @@ data = archiver.get(pvs, start_date=start, end_date=end)
 data = archiver.getAligned(pvs, start_date=start, end_date=end)
 #returns one combined pandas DataFrame with all PVS aligned to the desired time_base
 ```
+> **NOTE**: this will only work for scalars! An exception will be thrown if you will mix waveforms and scalars
 
 ### Get PV Status
 ```python
@@ -58,61 +60,28 @@ data = archiver.check("RFQ-010:RFS-Kly-110:Oil-Tmp")
 ```
 
 
-## Examples *Save and Restore*
-> **NOTE**: Check `examples`, where interactive notebooks are.
-
-To set up the client, all one needs is the following call:
-```python
-from pychiver.saveandrestore import SaveAndRestore
-sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se")
-```
-
-To get all configuration Nodes:
-```python
-configurations = sar.getConfigurations()
-# returns a dict of NameOfConfig to Configuration
-```
-
-To get all snapshots for a given configuration:
-
-```python
-sar.getSnapshots(configName='NameOfConfig')
-# returns a dict of snapshot name to DataFrame with snapshot values
-```
-To compare:
-```python
-status = sar.compare(snapshot=some_snapshot)
-#returns pandas.DataFrame with setPoint values and current values and with deltas
-```
-To restore:
-```python
-# TODO WIP still under implementation
-status = sar.restore(snapshot=some_snapshot)
-#returns 0 if all restored, rises ValueError, EpicsError in case of problems
-```
-To create new snapshot:
-```python
-sar.save(config=some_config, snapshot=some_snapshot, new_name='SomeNewName')
-# TODO WIP still under implementation
-```
-
 ## TimeStamp Format
 *pychiver* supports the following formats:
 1) as `datetime` objects, eg:  `datetime.now()`, `datetime.strptime('2021-02-28 13:13:13', DATE_FORMAT)`
 1) as plain text e.g. `'2021-02-28 13:13:13'`, following the format `%Y-%m-%d %H:%M:%S`
 
+
+# Installation
+
+```commandline
+$ git clone <repo_url/pychiver>
+$ cd pychiver
+$ pip install .
+```
+ 
+or 
+
+TBD
+
 ## Extra environmental configuration
 Setup of the environmental variable is possible, the following can be set for the desired instance
  - `EPICS_ARCHIVER_URL` 
  - `SAVE_AND_RESTORE_URL`
-
-## Installation
-
-Enter the folder with the source
-
-`make install`
-or
-`pip install .`
 
 
 

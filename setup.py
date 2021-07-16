@@ -10,7 +10,7 @@ setuptools.setup(
      version='0.5.0',
      author="Arek Gorzawski",
      author_email="arek.gorzawski@ess.eu",
-     description="A python wrapper for EPICS archiver",
+     description="A python utility for EPICS archiver, SaveAndRestore and waveform handling",
      long_description=long_description,
      long_description_content_type="text/markdown",
      install_requires=[
