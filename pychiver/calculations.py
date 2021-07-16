@@ -49,31 +49,16 @@ class LastAcquiredValueInterpolationStrategy(InterpolationStrategy):
         :param ys:
         :return:
         """
-        # TODO there might be more optimized way for that... any suggestions welcome
         if len(xs) != len(ys):
             raise ValueError('Provided arrays not of the same length!')
-        toReturn = []
-        for one in self.baseTs:
-            for i, x in enumerate(xs):
-                if x > one:
-                    idx = i-1 if i-1 > 0 else 0
-                    if i == len(xs)-1:
-                        idx = i
-                    toReturn.append(ys[idx])
-                    break
-                elif x == one:
-                    toReturn.append(ys[i])
-                    break
-                elif i == len(xs)-1:
-                    toReturn.append(ys[-1])
-                    break
-        return toReturn
+        idx = np.searchsorted(xs, self.baseTs, side='right')
+        return np.array(ys)[np.maximum(idx - 1, 0)]
 
 
 def alignDataFrames(dict_of_datasets,
-                        time_base=None,
-                        InterpolationStrategyImpl=None,
-                        time_column='time', value_columns=("val",), verbose=False) -> pd.DataFrame:
+                    time_base=None,
+                    InterpolationStrategyImpl=None,
+                    time_column='time', value_columns=("val",), verbose=False) -> pd.DataFrame:
     """
     For a given dict of DataFrames (dict of 'Data Label' -> DataFrame), the data alignment is performed for the
     provided data sets values (according to provided value columns) and the provided new time base
@@ -154,6 +139,6 @@ def calculateMovingAverage(dataset, window=10,
     df['mean_time'] = pd.to_datetime((dataset[time_column]).rolling(window=window).mean(), unit='s')
     for one_value_column in value_columns:
         if verbose: print("Column \'{}\' applied with {}s moving average".format(one_value_column, window))
-        df['mean_'+one_value_column] = dataset[one_value_column].rolling(window=window).mean()
+        df['mean_' + one_value_column] = dataset[one_value_column].rolling(window=window).mean()
     df.dropna(inplace=True)
     return df
