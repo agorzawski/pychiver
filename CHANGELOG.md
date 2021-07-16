@@ -1,3 +1,7 @@
+##0.5.0
+- waveform collectors (Archiver and Realtime)
+
+
 ##0.4.0
 - added first support for the save and restore
   - configuration/snapshots lists 
