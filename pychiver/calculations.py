@@ -42,19 +42,6 @@ class LinearInterpolationStrategy(InterpolationStrategy):
         return np.interp(self.baseTs, xs, ys)
 
 
-class LastAcquiredValueInterpolationStrategy(InterpolationStrategy):
-
-    def getValues(self, xs: list, ys: list) -> list:
-        """
-        Return new values that are aligned with the base Time Stamps
-        :param xs:
-        :param ys:
-        :return:
-        """
-        # TODO implement as area/last acquire value interpolation
-        raise NotImplementedError('Not implemented yet')
-
-
 def alignDataFrames(dict_of_datasets,
                     time_base=None,
                     InterpolationStrategyImpl=None,
