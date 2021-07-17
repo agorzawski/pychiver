@@ -1,6 +1,10 @@
+##0.5.1
+- LastAcquiredValue interpolation strategy
+- collectors with exposed two methods: getPV() and clear()
+- ManyPVWaveformCollector
+
 ##0.5.0
 - waveform collectors (Archiver and Realtime)
-
 
 ##0.4.0
 - added first support for the save and restore

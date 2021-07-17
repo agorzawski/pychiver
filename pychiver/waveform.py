@@ -18,22 +18,23 @@ class WaveformCollector(ABC):
     An abstract class for waveform collectors
     """
 
-    def __init__(self, PV: str,
+    def __init__(self, PV,
                  roi_indexes: tuple = None,
+                 roi_use_on_final = True,
                  callback=None,
                  callback_delay_in_seconds=1):
         """
         Constructor for the abstract WaveformCollector class.
 
-        :param PV: name of the PV
+        :param PV: name of the PV (or PVs)
         :param roi_indexes: definition of the Region Of Interest, required a tuple of indexes like (1,10)
-        :param callback: call back function to be call on data update
+        :param callback: call back function to be call on data update, structure: callback(PV=name,
+                            dataframe=pandas.dataframe, lastCheck=lastupdatetime)
         :param callback_delay_in_seconds: delay between two callbacks
         """
-        if not isinstance(PV, str):
-            raise ValueError('Use one PVWaveFormCollector per one PV')
         self._PV = PV
         self._roi_indexes = roi_indexes
+        self._roi_use_on_final = roi_use_on_final
         if callback is None:
             warnings.warn('You have not defined the callback function! dev>null will be used.')
             callback = self._null_callback
@@ -79,6 +80,9 @@ class WaveformCollector(ABC):
         """
         return list(self._dataframe.columns)
 
+    def getPV(self):
+        return self._PV
+
     def updateROI(self, roi_indexes: tuple):
         """
         Updates current settings for ROI
@@ -90,7 +94,8 @@ class WaveformCollector(ABC):
         self._roi_indexes = roi_indexes
 
     def _get_ROI(self, df):
-        if self._roi_indexes is not None and len(self._roi_indexes) == 2 and self._roi_indexes[0] < self._roi_indexes[1]:
+        if self._roi_use_on_final and self._roi_indexes is not None \
+                and len(self._roi_indexes) == 2 and self._roi_indexes[0] < self._roi_indexes[1]:
             df['val_roi'] = df.apply(lambda row: np.mean(row['val'][self._roi_indexes[0]:self._roi_indexes[1]]), axis=1)
         else:
             df['val_roi'] = df.apply(lambda row: math.nan)
@@ -99,9 +104,37 @@ class WaveformCollector(ABC):
         pass # an empty callback
 
 
-class PVWaveformCollector(WaveformCollector):
+class CommonRealTimeWaveformCollector(WaveformCollector):
 
-    def __init__(self, PV: str, data_buffer=3*60, **kwargs):
+    def __init__(self, PV, data_buffer=3*60, **kwargs):
+        super().__init__(PV, **kwargs)
+        self._data_buffer = data_buffer
+
+    def clearData(self):
+        self._dataframe = self._dataframe[0:0]
+
+    def _append(self, time, val, secs, secs_nanos):
+        self._dataframe = self._dataframe.append({'time': time,
+                                                  'val': val,
+                                                  'secs': secs,
+                                                  'secs_nanos': secs_nanos}, ignore_index=True)
+
+    def _update_buffer_and_call_callback(self, now):
+        # drop older than collector's buffer
+        oldest_to_keep = now - timedelta(seconds=self._data_buffer)
+        self._dataframe.drop(self._dataframe[self._dataframe['time'] < oldest_to_keep].index, inplace=True)
+        # check if call the external callback
+        checkTime = datetime.now()
+        if checkTime > self._callback_last_call + self._callback_delay:
+            self._callback_last_call = checkTime
+            self._callback(PV=self._PV, dataframe=self.getAllWaveforms(), lastCheck=checkTime)
+        else:
+            pass
+
+
+class PVWaveformCollector(CommonRealTimeWaveformCollector):
+
+    def __init__(self, PV: str, **kwargs):
         """
         Implementation of the WaveformCollector.
 
@@ -112,27 +145,57 @@ class PVWaveformCollector(WaveformCollector):
         :param callback_delay_in_seconds: a delay at which to call an external function, default 1s
         :param data_buffer: default 180s,
         """
+        if not isinstance(PV, str):
+            raise ValueError('Use one WaveformCollector per one PV')
         super().__init__(PV, **kwargs)
-        self._data_buffer = data_buffer
         epics.camonitor(self._PV, callback=self._execute_callback)
 
     def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
         timestamp = datetime.fromtimestamp(kwargs["timestamp"])
         # append new
-        self._dataframe = self._dataframe.append({'time': timestamp,
-                                                  'val': value,
-                                                  'secs': None,
-                                                  'secs_nanos': kwargs["timestamp"]}, ignore_index=True)
-        # drop older than collector's buffer
-        oldest_to_keep = timestamp - timedelta(seconds=self._data_buffer)
-        self._dataframe.drop(self._dataframe[self._dataframe['time'] < oldest_to_keep].index, inplace=True)
-        # check if call the external callback
-        checkTime = datetime.now()
-        if checkTime > self._callback_last_call + self._callback_delay:
-            self._callback_last_call = checkTime
-            self._callback(PV=self._PV, dataframe=self.getAllWaveforms(), lastCheck=checkTime)
-        else:
+        self._append(timestamp, value, None, kwargs["timestamp"])
+        self._update_buffer_and_call_callback(timestamp)
+
+
+class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
+
+    def __init__(self, PVS: list, **kwargs):
+        """
+        Implementation of the WaveformCollector.
+
+        Establish a monitor to provided PVs. In the contained dataframe, one can see an arra of the ROI value for each PVS
+
+        The provided ROI indexes are used to calculate individual values, not the final product!
+
+        :param PVS: name of the pvs to be subscribed to
+        :param callback: an external function to call
+        :param callback_delay_in_seconds: a delay at which to call an external function, default 1s
+        :param data_buffer: default 180s,
+        """
+        super().__init__(PV=list(PVS), **kwargs)
+        self._roi_use_on_final = False
+        timestamp = datetime.now()
+        self._append(timestamp, [0 for pv in PVS], None, timestamp.timestamp())
+        for PV in PVS:
+            print('Registered \'{}\' for camonitoring'.format(PV))
+            epics.camonitor(PV, callback=self._execute_callback)
+
+    def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
+        PVIndex = self._PV.index(pvname)
+        timestamp = datetime.fromtimestamp(kwargs["timestamp"])
+        print(timestamp, value, PVIndex)
+        try:
+            # TODO WIP test that!
+            newValueToBeSaved = [i for i in self._dataframe.tail()['val'][0]] # TODO this one is fishy...
+            print("last entry")
+            print(newValueToBeSaved)
+            newValueToBeSaved[PVIndex] = np.mean(np.array(value)[self._roi_indexes[0]:self._roi_indexes[1]])
+            print("updated entry")
+            print(newValueToBeSaved)
+            self._append(timestamp, newValueToBeSaved, None, kwargs["timestamp"])
+        except:
             pass
+        self._update_buffer_and_call_callback(timestamp)
 
 
 class ArchiverWaveformCollector(WaveformCollector):
@@ -147,7 +210,8 @@ class ArchiverWaveformCollector(WaveformCollector):
         :param start_date: start date
         :param end_date: if None, it will used now()
         """
-
+        if not isinstance(PV, str):
+            raise ValueError('Use one WaveformCollector per one PV')
         super().__init__(PV, **kwargs)
         self._archiver = Archiver(archiver_url=archiver_url)
         self._dataframe = self._fetch_values(PV, start_date=start_date, end_date=end_date)
