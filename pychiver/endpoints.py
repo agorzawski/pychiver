@@ -57,10 +57,10 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
                                             'nanos': 0,
                                             'severity': severity}, ignore_index=True)
 
-        dataset['status_label'] = dataset.apply(lambda row: EpicsStatus(row['status']), axis=1)
-        dataset['severity_label'] = dataset.apply(lambda row: EpicsSeverity(row['severity']), axis=1)
-        dataset['secs_nanos'] = dataset['secs'] + dataset['nanos'] / 1e9
-        dataset['time'] = pandas.to_datetime(dataset['secs_nanos'], unit='s')
+    dataset['status_label'] = dataset.apply(lambda row: EpicsStatus(row['status']), axis=1)
+    dataset['severity_label'] = dataset.apply(lambda row: EpicsSeverity(row['severity']), axis=1)
+    dataset['secs_nanos'] = dataset['secs'] + dataset['nanos'] / 1e9
+    dataset['time'] = pandas.to_datetime(dataset['secs_nanos'], unit='s')
     return dataset
 
 
@@ -86,7 +86,8 @@ class JsonEndPointArchiver(EndPoint):
             return dataset
         return _fix(dataset, start_date, end_date)
 
-    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None, iteration=24, verbose=False) -> dict:
+    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None,
+                        entries_warning_limit=5000, iteration=24, verbose=False) -> dict:
         if verbose:
             print('No data found for \'{}\', trying earlier between: start:{} until {}'.format(PV, start_date, end_date))
         if iteration == 0:
@@ -97,6 +98,10 @@ class JsonEndPointArchiver(EndPoint):
         entries = self._countEntries(PV, start_date_str, end_date_str)
         if entries_limit is None:
             entries_limit = entries
+        if entries > entries_warning_limit:
+            warnings.warn(
+                'You are about to extract {} samples, this operation may take significant amount of time...'.format(
+                    entries))
         nth_url = '{}?pv=nth_{}({})&from={}&to={}'.format(self.archiver_url_data, int(entries // entries_limit),
                                                           PV, start_date_str, end_date_str)
 
@@ -106,7 +111,7 @@ class JsonEndPointArchiver(EndPoint):
                                         end_date=start_date, entries_limit=entries_limit, iteration=iteration-1)
         return toReturn[0]
 
-    def _countEntries(self, PV, start_date, end_date, warning_limit=5000) -> int:
+    def _countEntries(self, PV, start_date, end_date) -> int:
         """
         Returns counted entries for the PV in a given time range
 
@@ -120,10 +125,6 @@ class JsonEndPointArchiver(EndPoint):
         entries = 0
         for i in json_data:
             entries += i['val']
-        if entries > warning_limit:
-            warnings.warn(
-                'You are about to extract {} samples, this operation may take significant amount of time...'.format(
-                    entries))
         return entries
 
     def getPVStatus(self, PV) -> dict:
