@@ -1,3 +1,7 @@
+##0.5.3
+- Included auto search for the last stored value in case the value in the requested window does not exist.
+
+
 ##0.5.2
 - bug fixed the entries limit handling
 - bug fixed the empty dataframe handling
