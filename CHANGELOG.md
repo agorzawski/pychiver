@@ -1,3 +1,8 @@
+##0.5.2
+- bug fixed the entries limit handling
+- bug fixed the empty dataframe handling
+
+
 ##0.5.1
 - LastAcquiredValue interpolation strategy
 - collectors with exposed two methods: getPV() and clear()

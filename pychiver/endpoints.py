@@ -4,6 +4,7 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
     E.Laface    <emmanuele.laface@ess.eu>
 """
+import warnings
 
 from .timeutils import validateTimeStamps
 from .codes import EpicsStatus, EpicsSeverity
@@ -51,6 +52,11 @@ class JsonEndPointArchiver(EndPoint):
                                                           start_date, end_date)
         json_data = requests.get(nth_url).json()[0]['data']
         dataset = pandas.read_json(json.dumps(json_data))
+        if dataset.empty:
+            # TODO consider retrieve iteratively to get the 'last' stored value
+            #  and to produce the result DF with two lines (start and end time)
+            warnings.warn('Empty dataset extracted for \'\''.format(PV))
+            return dataset
         dataset['status_label'] = dataset.apply(lambda row: EpicsStatus(row['status']), axis=1)
         dataset['severity_label'] = dataset.apply(lambda row: EpicsSeverity(row['severity']), axis=1)
         dataset['secs_nanos'] = dataset['secs'] + dataset['nanos'] / 1e9
