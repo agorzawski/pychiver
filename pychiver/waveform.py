@@ -20,7 +20,7 @@ class WaveformCollector(ABC):
 
     def __init__(self, PV,
                  roi_indexes: tuple = None,
-                 roi_use_on_final = True,
+                 roi_use_on_final=True,
                  callback=None,
                  callback_delay_in_seconds=1):
         """
@@ -101,12 +101,12 @@ class WaveformCollector(ABC):
             df['val_roi'] = df.apply(lambda row: math.nan)
 
     def _null_callback(self, **kwargs):
-        pass # an empty callback
+        pass  # an empty callback
 
 
 class CommonRealTimeWaveformCollector(WaveformCollector):
 
-    def __init__(self, PV, data_buffer=3*60, **kwargs):
+    def __init__(self, PV, data_buffer=3 * 60, **kwargs):
         super().__init__(PV, **kwargs)
         self._data_buffer = data_buffer
 
@@ -163,9 +163,9 @@ class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
         """
         Implementation of the WaveformCollector.
 
-        Establish a monitor to provided PVs. In the contained dataframe, one can see an arra of the ROI value for each PVS
+        Establish a monitor to provided PVs (representing a scalar PV).
+        In the contained dataframe, one can see an array of the last value for each PV
 
-        The provided ROI indexes are used to calculate individual values, not the final product!
 
         :param PVS: name of the pvs to be subscribed to
         :param callback: an external function to call
@@ -181,21 +181,18 @@ class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
             epics.camonitor(PV, callback=self._execute_callback)
 
     def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
+        if isinstance(value, list):
+            warnings.warn('Subscribed PV {} is a waveform... skipping.'.format(pvname))
+            return None
         PVIndex = self._PV.index(pvname)
         timestamp = datetime.fromtimestamp(kwargs["timestamp"])
-        print(timestamp, value, PVIndex)
         try:
-            # TODO WIP test that!
-            newValueToBeSaved = [i for i in self._dataframe.tail()['val'][0]] # TODO this one is fishy...
-            print("last entry")
-            print(newValueToBeSaved)
-            newValueToBeSaved[PVIndex] = np.mean(np.array(value)[self._roi_indexes[0]:self._roi_indexes[1]])
-            print("updated entry")
-            print(newValueToBeSaved)
+            newValueToBeSaved = [i for i in self._dataframe.iloc[[-1]]['val'].values[0]]  # TODO this one is fishy...
+            newValueToBeSaved[PVIndex] = value
             self._append(timestamp, newValueToBeSaved, None, kwargs["timestamp"])
+            self._update_buffer_and_call_callback(timestamp)
         except:
             pass
-        self._update_buffer_and_call_callback(timestamp)
 
 
 class ArchiverWaveformCollector(WaveformCollector):
@@ -220,4 +217,3 @@ class ArchiverWaveformCollector(WaveformCollector):
 
     def _fetch_values(self, PV, start_date, end_date=None):
         return self._archiver.getWaveform(PV, start_date=start_date, end_date=end_date)
-
