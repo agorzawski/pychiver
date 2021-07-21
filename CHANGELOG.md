@@ -1,3 +1,6 @@
+##0.5.4
+- ManyPVWaveformCollector fixed and available
+
 ##0.5.3
 - Included auto search for the last stored value in case the value in the requested window does not exist.
 
