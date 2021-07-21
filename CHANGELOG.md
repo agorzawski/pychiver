@@ -1,6 +1,22 @@
+##0.5.4
+- ManyPVWaveformCollector fixed and available
+
+##0.5.3
+- Included auto search for the last stored value in case the value in the requested window does not exist.
+
+
+##0.5.2
+- bug fixed the entries limit handling
+- bug fixed the empty dataframe handling
+
+
+##0.5.1
+- LastAcquiredValue interpolation strategy
+- collectors with exposed two methods: getPV() and clear()
+- ManyPVWaveformCollector
+
 ##0.5.0
 - waveform collectors (Archiver and Realtime)
-
 
 ##0.4.0
 - added first support for the save and restore

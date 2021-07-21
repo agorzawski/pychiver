@@ -42,6 +42,21 @@ class LinearInterpolationStrategy(InterpolationStrategy):
         return np.interp(self.baseTs, xs, ys)
 
 
+class LastAcquiredValueInterpolationStrategy(InterpolationStrategy):
+
+    def getValues(self, xs: list, ys: list) -> list:
+        """
+        Return new values that are aligned with the base Time Stamps, and represent the closest (earlier) value
+        :param xs:
+        :param ys:
+        :return:
+        """
+        if len(xs) != len(ys):
+            raise ValueError('Provided arrays not of the same length!')
+        idx = np.searchsorted(xs, self.baseTs, side='right')
+        return np.array(ys)[np.maximum(idx - 1, 0)]
+
+
 def alignDataFrames(dict_of_datasets,
                     time_base=None,
                     InterpolationStrategyImpl=None,
@@ -66,18 +81,31 @@ def alignDataFrames(dict_of_datasets,
     if not isinstance(dict_of_datasets, dict):
         raise ValueError('Provided data sets should be in dict, ie. {\'PV1\':df_1,\'PV2\':df_2,}')
 
-    if len(dict_of_datasets.keys()) < 2 and time_base is None:
-        raise ValueError('Only one DataFrame provided with no external time_base.')
-
-    for one_df in dict_of_datasets.values():
+    numberOfValidDfs = 0
+    dfToSkip = []
+    for df_name in dict_of_datasets.keys():
+        one_df = dict_of_datasets[df_name]
+        if one_df.empty:
+            dfToSkip.append(df_name)
+            warnings.warn('Provided an empty dataframe for \'{}\', skipping it for the interpolation!'.format(df_name))
+            continue
         if time_column not in one_df.columns:
             raise ValueError('One of the dataframes does not have \'{}\' column'.format(time_column))
         for one_val_column in value_columns:
             if one_val_column not in one_df.columns:
                 raise ValueError('One of the dataframes does not have \'{}\' column'.format(one_val_column))
 
+        numberOfValidDfs += 1
+
+    if numberOfValidDfs < 2 and time_base is None:
+        raise ValueError('Only one valid DataFrame provided with no external time_base! Fix your data input.')
+
+    print(numberOfValidDfs)
+
     newDF_columns = [time_column]
     for one_PV in dict_of_datasets.keys():
+        if one_PV in dfToSkip:
+            continue
         for one_val_column in value_columns:
             newDF_columns.append(one_PV + ':' + one_val_column)
     newDF_values = []
@@ -95,6 +123,8 @@ def alignDataFrames(dict_of_datasets,
             print('External time base used.')
 
     for one_PV in dict_of_datasets.keys():
+        if one_PV in dfToSkip:
+            continue
         for one_val_column in value_columns:
             if verbose:
                 print("Interpolating for {}:{}".format(one_PV, one_val_column))
@@ -122,6 +152,9 @@ def calculateMovingAverage(dataset, window=10,
     :return: None
     """
     df = pd.DataFrame()
+    if dataset.empty:
+        warnings.warn('Cannot apply moving average on an empty dataframe, skipping.')
+        return df
     df[time_column] = dataset[time_column]
     df['mean_time'] = pd.to_datetime((dataset[time_column]).rolling(window=window).mean(), unit='s')
     for one_value_column in value_columns:

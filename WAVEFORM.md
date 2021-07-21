@@ -1,10 +1,16 @@
 # pychiver for WAVEFORM support
 
-There are two implementations for waveform collectors:
-* `PVWaveformCollector` Real time EPICS (camonitor) collector
-* `ArchiverWaveformCollector` Archived data collector
+There are few implementations available for waveform collectors:
+* `PVWaveformCollector` Real time EPICS (camonitor) collector, to be set up with one PV, a raw waveform is collected 
+  and kept in the data buffer
+* `ManyPVSWaveformCollector`, when there is a need for many PVs(scalar!) to be followed, this collector allows to listen to the waveform PV, collect its average value in ROI, and keep it in the data buffer. 
+  Exposed dataframe contains a timeseries waveform that is build from individual PV's values. 
+* `ArchiverWaveformCollector`, similar to the `PVWaveformCollector` but for the Archived data collector.  
 
 Both provide convenience methods for treating waveforms, their running scalar representations, Region of Interest (ROI) configuration etc.
+
+One can visualise the data combining the collectors with the `spec2d` [package](git link)
+![](doc/archived_data.png)
 
 ```python
 # main collector's return point
@@ -68,7 +74,7 @@ pvCollector = PVWaveformCollector(PV=PV,
 while True:
     sleep(0.1)
     if timeConditionForElapsed10s:
-        # on tof of the 2s refresh from the callback, every 10s this will be called
+        # on top of the 2s refresh from the callback, every 10s this will be called
         print(pvCollector.getAllWaveforms())
 
 ```

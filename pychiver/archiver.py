@@ -64,14 +64,23 @@ class Archiver:
         :param verbose: default False, if True the processing printout is provided
         :return: dict of PV to a DataFrame
         """
+        useSeparateLimits = False
+
         if isinstance(PV, tuple) or isinstance(PV, list):
+            if isinstance(entries_limit, tuple) and len(entries_limit) == len(PV):
+                useSeparateLimits = True
             dataToReturn = {}
-            for onePV in PV:
+            for index, onePV in enumerate(PV):
                 if verbose: print('Collecting data for', onePV)
+                e_limit = entries_limit
+                if useSeparateLimits:
+                    e_limit = entries_limit[index]
                 dataToReturn[onePV] = self._get(onePV, start_date=start_date, end_date=end_date,
-                                                entries_limit=entries_limit, verbose=verbose)[0]
+                                                entries_limit=e_limit, verbose=verbose)[0]
             return dataToReturn
         else:
+            if isinstance(entries_limit, tuple) and len(entries_limit) > 0:
+                entries_limit = entries_limit[0]
             return {PV: self._get(PV, start_date=start_date, end_date=end_date,
                                   entries_limit=entries_limit, verbose=verbose)[0]}
 
@@ -102,7 +111,7 @@ class Archiver:
         :param end_date:
         :param time_base: New time base to use, default None, then first PV timestamps' in the set is used. If new provided, use epoch seconds.
         :param strategy: Interpolation strategy to be used for the aligning, default LinearInterpolationStrategy
-        :param entries_limit: optional,
+        :param entries_limit: optional, default None, should be a tuple of limits per requested PV
         :param time_column: optional,
         :param value_columns: optional,
         :param verbose: default False
