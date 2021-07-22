@@ -5,7 +5,6 @@ before_script:
   - pip install -r requirements.txt
 
 stages:
-#  - Static Analysis
   - test
   - analyse
 
