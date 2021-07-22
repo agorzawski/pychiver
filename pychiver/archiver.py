@@ -212,7 +212,9 @@ class Archiver:
             pass
         else:
             df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date,
-                                            entries_limit=entries_limit)
+                                            entries_limit=entries_limit,
+                                            verbose=verbose)
+
         try:
             if len(df) > 0 and len(df['val'][0]):
                 isWaveform = True
