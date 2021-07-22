@@ -1,19 +1,14 @@
-default:
-  tags:
-    - docker
-  image: docker:latest
-
-before_script:
-  - python --version
-  - pip install -r requirements.txt
-
+---
 stages:
   - test
   - analyse
 
 unittest:
   stage: test
+  image: "python:3.7"
   script:
+    - python --version
+    - pip install -r requirements.txt
     - pip install coverage
     - python -m unittest -v
     - coverage run -m unittest -v
