@@ -1,3 +1,6 @@
+##0.6.0
+- Support for comparison of the boolean signals
+
 ##0.5.4
 - ManyPVWaveformCollector fixed and available
 

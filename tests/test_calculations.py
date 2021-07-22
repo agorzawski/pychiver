@@ -95,6 +95,7 @@ class TestLastValueInterpolation(unittest.TestCase):
         for i in range(len(array1)):
             self.assertAlmostEqual(array1[i], array2[i], places=2)
 
+
 class TestDataAlign(unittest.TestCase):
     def test_wrong_init_no_interpolation(self):
         with self.assertRaises(ValueError):
@@ -167,9 +168,6 @@ class TestBooleanActions(unittest.TestCase):
 
     def test_when_one_with_another_XOR(self):
         result = compareTwoBooleanArrays(DF_BOOL_1, DF_BOOL_3, method=Method.XOR)
-        print(DF_BOOL_1)
-        print(DF_BOOL_3)
-        print(result)
         self._compare_two_arrays(result, DF_BOOL_TEST_1XOR3)
 
     def _compare_two_arrays(self, array1, array2):

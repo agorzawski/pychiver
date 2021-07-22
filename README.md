@@ -5,6 +5,7 @@ A python package providing a wrapped utility service:
   - Simple **data extraction** for scalars and waveforms,
   - **Auto search for the last value** if not found in the requested time window,
   - Some tools are provided for **data processing**  like data aligning, moving average or data source (PVs) status checks.
+  - Comparison of boolean signals, see more in [BOOLEAN.md](BOOLEAN.md)
 - **For saved configurations and snapshots** in the EPICS *SaveAndRestore*, see more in [SAVEANDRESTORE.md](SAVEANDRESTORE.md)
 - Extended **waveform support** with collectors for both: archiver and realtime subscriptions, see more in [WAVEFORM.md](WAVEFORM.md)
 > **NOTE**: Check folder `examples`, where interactive notebooks and `cli` scripts are.

@@ -170,6 +170,40 @@ class Method(Enum):
     XOR = 2
 
 
+class Edge(Enum):
+    RISING = 0
+    FALLING = 1
+    ANY = -1
+
+
+def findCloseTimestamps(dfs,
+                        edge_to_use=Edge.RISING,
+                        tolerance_in_seconds=1,
+                        timeColumn='secs_nanos',
+                        valueColumn='val',
+                        verbose=False):
+    newTs = []
+    for pv in dfs.keys():
+        oneDf = dfs[pv]
+        if not oneDf[valueColumn].between(0, 1, inclusive="both").any():
+            raise ValueError('It seems that your boolean data for {} has values outside of 0 and 1... cannot')
+        toConsider = oneDf.loc[oneDf[valueColumn] != edge_to_use.value]
+        if verbose:
+            print('---------{}-----------'.format(pv))
+            print(oneDf[timeColumn].values)
+            print(toConsider)
+        newTs.extend(toConsider[timeColumn].values)
+
+    allTimeStamps = np.array(newTs)
+    closeOnes = allTimeStamps[:-1] - allTimeStamps[1:]
+    closeOnes.sort()
+    indexes = np.where(np.abs(closeOnes) < tolerance_in_seconds)
+    if verbose:
+        print(indexes)
+        print(allTimeStamps[indexes])
+    return allTimeStamps[indexes]
+
+
 def compareTwoBooleanArrays(array1, array2, method=Method.AND):
     """
 
@@ -186,4 +220,3 @@ def compareTwoBooleanArrays(array1, array2, method=Method.AND):
         return np.bitwise_or(array1, array2)
     if method == Method.XOR:
         return np.bitwise_xor(array1, array2)
-
