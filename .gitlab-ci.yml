@@ -21,5 +21,3 @@ sonar-scanner:
   image: sonarsource/sonar-scanner-cli:latest
   script:
     - sonar-scanner -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=pychiver -Dsonar.projectVersion=$CI_COMMIT_REF_NAME -Dsonar.sources=pychiver,tests
-  only:
-    - branches@accop/pyTools/pychiver
