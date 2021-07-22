@@ -1,17 +1,22 @@
-image: "python:3.7"
-
-before_script:
-  - python --version
-  - pip install -r requirements.txt
-
+---
 stages:
-#  - Static Analysis
   - test
+  - analyse
 
 unittest:
   stage: test
+  image: "python:3.7"
   script:
+    - python --version
+    # - pip install -r requirements.txt
+    - pip install .
     - pip install coverage
     - python -m unittest -v
     - coverage run -m unittest -v
     - coverage report
+
+sonar-scanner:
+  stage: analyse
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    - sonar-scanner -Dsonar.login=$SONAR_PROJECT_PYCHIVER -Dsonar.projectKey=pychiver -Dsonar.projectVersion=$CI_COMMIT_REF_NAME -Dsonar.sources=pychiver,tests -Dsonar.host.url=https://sonarqube.esss.lu.se
