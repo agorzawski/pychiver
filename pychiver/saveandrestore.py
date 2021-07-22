@@ -24,20 +24,25 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+import math
 
 from .sardomain import *
+from .archiver import Archiver
+from .timeutils import getDateTimeObj
 
 import requests
 import epics
 import os
 import pickle
 import warnings
+from datetime import datetime, timedelta
 
 
 class SaveAndRestoreEndPoint:
     """
     An abstract class for the Save and Restore end point
     """
+
     def __init__(self, service_url=None):
         if service_url is None:
             raise ValueError('SaveAndRestore service URL was not provided nor set in the env. \
@@ -113,7 +118,8 @@ class SaveAndRestore:
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
     """
 
-    def __init__(self, service_url=None, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None):
+    def __init__(self, service_url: str, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None,
+                 archiver_url: str = None):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
 
@@ -121,6 +127,7 @@ class SaveAndRestore:
         If local file will not be found, the first time user will call getConfigurations() a local file will be created.
 
         :param service_url: required, an url for the service
+        :param archiver_url: optional, url for Archiver service, for comparisons
         :param DefaultImplementation: optional, default is JSONSaveAndRestoreEndPoint
         :param cacheFile: optional, default is False
         """
@@ -134,6 +141,9 @@ class SaveAndRestore:
                 self.cachedConfigurations = pickle.load(open(cacheFile, 'rb'))
             except:
                 print('No file {} found. Skipping loading from cache.'.format(self.cacheFile))
+        self._archiver = None
+        if archiver_url is not None:
+            self._archiver = Archiver(archiver_url=archiver_url)
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
@@ -178,22 +188,44 @@ class SaveAndRestore:
         # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
         raise NotImplementedError('Not implemented yet!')
 
-    def compare(self, snapshot: SARSnapshot = None) -> pandas.DataFrame:
+    def compare(self, snapshot: SARSnapshot = None, date_time=None, verbose=False) -> pandas.DataFrame:
         """
-        Provides the way of comparing a snapshot to the live values, that are retrieved by pyepics.
+        Provides the way of comparing a snapshot to the:
+         - live values, that are retrieved by pyepics.
+         - archived values in the archiver at given date_time
 
-        :param snapshot:
-        :return: DataFrame for given snapshot, enlarged with live_values and deltas to the setpoitns
+        :param verbose:
+        :param date_time:
+        :param snapshot: existing snapshot,
+        :date_time: default None
+        :return: DataFrame for given snapshot, enlarged with live_values and archived_values and their deltas to the setpoitns
         """
-        # TODO add some error support
-        values = self.epics.caget_many(pvlist=snapshot.getPVs())  # TODO check order PVs
-        # print(values)
         df = snapshot.getStoredValues()
-        df['live_values'] = values
-        try:
-            df['delta'] = df['stored_setpoint'] - df['live_values']
-        except:
-            warnings.warn("Some error occurred during the delta calculation, skipping")
+        if date_time is None:
+            # TODO add some comperror support
+            values = self.epics.caget_many(pvlist=snapshot.getPVs())  # TODO check order PVs
+            # print(values)
+            df['live_values'] = values
+            df['archived_values'] = math.nan
+            try:
+                df['delta'] = df['stored_setpoint'] - df['live_values']
+            except:
+                warnings.warn("Some error occurred during the delta calculation, skipping")
+
+        if isinstance(date_time, datetime) or isinstance(date_time, str):
+            if self._archiver is None:
+                raise ValueError('Service not instantiated with the archiver link. Cannot perform that action!')
+            date_time_to_consider = getDateTimeObj(date_time)
+            startD = date_time_to_consider - timedelta(seconds=1)
+            endD = date_time_to_consider + timedelta(seconds=1)
+            data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD, verbose=verbose)
+            print("=======")
+            print(data)
+            print("=======")
+            df['live_values'] = math.nan
+            df['archived_values'] = math.nan
+            # TODO finish this
+            raise NotImplementedError("Not implemented until the end!")
         return df
 
     def restore(self, snapshot: SARSnapshot = None):
