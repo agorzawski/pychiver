@@ -1,4 +1,7 @@
-image: "python:3.7"
+default:
+  tags:
+    - docker
+  image: docker:latest
 
 before_script:
   - python --version
