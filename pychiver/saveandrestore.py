@@ -216,7 +216,7 @@ class SaveAndRestore:
             if self._archiver is None:
                 raise ValueError('Service not instantiated with the archiver link. Cannot perform that action!')
             date_time_to_consider = getDateTimeObj(date_time)
-            startD = date_time_to_consider - timedelta(seconds=1)
+            startD = date_time_to_consider - timedelta(seconds=1)  # TODO archiver window to consider?
             endD = date_time_to_consider + timedelta(seconds=1)
             data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD, verbose=verbose)
             print("=======")
@@ -224,7 +224,7 @@ class SaveAndRestore:
             print("=======")
             df['live_values'] = math.nan
             df['archived_values'] = math.nan
-            # TODO finish this
+            # TODO finish this comparison with a proper data extracted
             raise NotImplementedError("Not implemented until the end!")
         return df
 
