@@ -96,15 +96,18 @@ class JsonEndPointArchiver(EndPoint):
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
+        # TODO see if the recursive call should be here
         if entries_limit is None:
             entries_limit = entries
         if entries > entries_warning_limit:
             warnings.warn(
                 'You are about to extract {} samples, this operation may take significant amount of time...'.format(
                     entries))
+        # try:
         nth_url = '{}?pv=nth_{}({})&from={}&to={}'.format(self.archiver_url_data, int(entries // entries_limit),
                                                           PV, start_date_str, end_date_str)
-
+        # except ZeroDivisionError:
+        #     return
         toReturn = requests.get(nth_url).json()
         if len(toReturn[0].get('data', [])) == 0:
             return self._getJSONRequest(PV, start_date=start_date - datetime.timedelta(hours=1),

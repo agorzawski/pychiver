@@ -29,7 +29,9 @@ Authors:
 import os
 import warnings
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage
+import numpy
+
+from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge
 from .endpoints import JsonEndPointArchiver
 import pandas
 
@@ -152,6 +154,34 @@ class Archiver:
         return calculateMovingAverage(df[PV], window=window,
                                       time_column=time_column, value_columns=value_columns,
                                       verbose=verbose)
+
+    def compare(self, PVs: list, start_date, end_date=None,
+                #index_of_reference_PV=0,
+                compare_edge=Edge.FALLING,
+                tolerance_in_seconds=0.1,
+                verbose=False) -> numpy.array:
+        """
+        Returns timestamps of the close occurrences of the RISING or FALLING for two
+
+        :param PVs:
+        :param start_date:
+        :param end_date:
+        :param compare_edge: compare the occurrences of the selected change
+        :param tolerance_in_seconds: absolute (+/-) acceptable difference for simultaneous events
+        :param verbose:
+        :return:
+        """
+        if len(PVs) != 2:
+            raise ValueError('Only two signals expected for comparison!')
+
+        # TODO see what to pass more, limits? etc..
+        dfs = self.get(PVs, start_date=start_date, end_date=end_date, verbose=verbose)
+
+        closeTimeStamps = findCloseTimestamps(dfs,
+                                              tolerance_in_seconds=tolerance_in_seconds,
+                                              edge_to_use=compare_edge,
+                                              verbose=verbose)
+        return closeTimeStamps
 
     def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
         """

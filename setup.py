@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='pychiver',
-     version='0.5.4',
+     version='0.6.0',
      author="Arek Gorzawski",
      author_email="arek.gorzawski@ess.eu",
      description="A python utility for EPICS archiver, SaveAndRestore and waveform handling",

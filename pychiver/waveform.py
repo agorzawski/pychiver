@@ -22,7 +22,8 @@ class WaveformCollector(ABC):
                  roi_indexes: tuple = None,
                  roi_use_on_final=True,
                  callback=None,
-                 callback_delay_in_seconds=1):
+                 callback_delay_in_seconds=1,
+                 **kwargs):
         """
         Constructor for the abstract WaveformCollector class.
 
@@ -54,7 +55,7 @@ class WaveformCollector(ABC):
         """
         if timestamp is None:
             toReturn = self._dataframe.tail(last)
-            self._get_ROI(toReturn)
+            self._update_ROI(toReturn)
             return toReturn
         else:
             # TODO use last available value as interpolation strategy
@@ -65,7 +66,7 @@ class WaveformCollector(ABC):
         :return: all buffered waveforms with additional column val_roi, that has an average value in the roi region
         """
         toReturn = self._dataframe.copy()  # TODO to be checked how it goes with the performance
-        self._get_ROI(toReturn)
+        self._update_ROI(toReturn)
         return toReturn
 
     def getROITrace(self) -> pandas.DataFrame:
@@ -93,7 +94,9 @@ class WaveformCollector(ABC):
             raise ValueError('Wrong ROI settings provided!')
         self._roi_indexes = roi_indexes
 
-    def _get_ROI(self, df):
+    def _update_ROI(self, df):
+        if self._dataframe.empty:
+            return
         if self._roi_use_on_final and self._roi_indexes is not None \
                 and len(self._roi_indexes) == 2 and self._roi_indexes[0] < self._roi_indexes[1]:
             df['val_roi'] = df.apply(lambda row: np.mean(row['val'][self._roi_indexes[0]:self._roi_indexes[1]]), axis=1)
@@ -138,7 +141,8 @@ class PVWaveformCollector(CommonRealTimeWaveformCollector):
         """
         Implementation of the WaveformCollector.
 
-        Initialises PV waveform data collector. It uses camonitor from pyepics.
+        Initialises PV waveform data collector. It uses PV from pyepics, use `connection_timeout` (default 3s)
+        to adjust the waiting time
 
         :param PV: name of the pv
         :param callback: an external function to call
@@ -148,7 +152,11 @@ class PVWaveformCollector(CommonRealTimeWaveformCollector):
         if not isinstance(PV, str):
             raise ValueError('Use one WaveformCollector per one PV')
         super().__init__(PV, **kwargs)
-        epics.camonitor(self._PV, callback=self._execute_callback)
+        self._epicsPV = epics.PV(self._PV,
+                                 connection_timeout=kwargs.get('connection_timeout', 1),
+                                 count=kwargs.get('count', None),
+                                 )
+        self._epicsPV.add_callback(self._execute_callback)
 
     def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
         timestamp = datetime.fromtimestamp(kwargs["timestamp"])

@@ -1,3 +1,7 @@
+##0.6.0
+- Fixed waveform support (longer connections timeouts, configurable number of data points)
+- Support for the comparison of the boolean signals (beta)
+
 ##0.5.4
 - ManyPVWaveformCollector fixed and available
 
