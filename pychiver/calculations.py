@@ -100,8 +100,6 @@ def alignDataFrames(dict_of_datasets,
     if numberOfValidDfs < 2 and time_base is None:
         raise ValueError('Only one valid DataFrame provided with no external time_base! Fix your data input.')
 
-    print(numberOfValidDfs)
-
     newDF_columns = [time_column]
     for one_PV in dict_of_datasets.keys():
         if one_PV in dfToSkip:
