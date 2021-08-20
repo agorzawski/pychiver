@@ -1,5 +1,6 @@
 ##0.6.1
-- Added/expanded jupyter examples 
+- Added/expanded jupyter examples
+- Waveform Collector ROI update/retrieval updated
 - some cleanup on the leftovers (printouts, doc, etc) 
 
 ##0.6.0

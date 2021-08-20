@@ -162,6 +162,41 @@ def calculateMovingAverage(dataset, window=10,
     return df
 
 
+def returnMethods():
+    """
+    TODO Ported from spec2d
+    :return:
+    """
+    return ['None', 'FFT (Abs)', 'FFT (Img)', 'FFT (Re)', 'FFT (Ang)', 'iFFT (Abs)', 'iFFT (Img)', 'iFFT (Re)',
+            'iFFT (Ang)']
+
+
+def get_fft(fftMethodIndex, array_in):
+    """
+    TODO Ported from spec2d
+    :return:
+    """
+    currentText = returnMethods()[fftMethodIndex]
+    if currentText == 'FFT (Abs)':
+        return np.abs(np.fft.fft(array_in))
+    elif currentText == 'FFT (Img)':
+        return np.fft.fft(array_in).imag
+    elif currentText == 'FFT (Re)':
+        return np.fft.fft(array_in).real
+    elif currentText == 'FFT (Ang)':
+        return np.angle(np.fft.fft(array_in))
+    elif currentText == 'iFFT (Abs)':
+        return np.abs(np.fft.ifft(array_in))
+    elif currentText == 'iFFT (Img)':
+        return np.fft.ifft(array_in).imag
+    elif currentText == 'iFFT (Re)':
+        return np.fft.ifft(array_in).real
+    elif currentText == 'iFFT (Ang)':
+        return np.angle(np.fft.ifft(array_in))
+    else:
+        return array_in
+
+
 class Method(Enum):
     AND = 0
     OR = 1
