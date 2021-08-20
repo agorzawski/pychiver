@@ -100,8 +100,6 @@ def alignDataFrames(dict_of_datasets,
     if numberOfValidDfs < 2 and time_base is None:
         raise ValueError('Only one valid DataFrame provided with no external time_base! Fix your data input.')
 
-    print(numberOfValidDfs)
-
     newDF_columns = [time_column]
     for one_PV in dict_of_datasets.keys():
         if one_PV in dfToSkip:
@@ -162,6 +160,41 @@ def calculateMovingAverage(dataset, window=10,
         df['mean_' + one_value_column] = dataset[one_value_column].rolling(window=window).mean()
     df.dropna(inplace=True)
     return df
+
+
+def returnMethods():
+    """
+    TODO Ported from spec2d
+    :return:
+    """
+    return ['None', 'FFT (Abs)', 'FFT (Img)', 'FFT (Re)', 'FFT (Ang)', 'iFFT (Abs)', 'iFFT (Img)', 'iFFT (Re)',
+            'iFFT (Ang)']
+
+
+def get_fft(fftMethodIndex, array_in):
+    """
+    TODO Ported from spec2d
+    :return:
+    """
+    currentText = returnMethods()[fftMethodIndex]
+    if currentText == 'FFT (Abs)':
+        return np.abs(np.fft.fft(array_in))
+    elif currentText == 'FFT (Img)':
+        return np.fft.fft(array_in).imag
+    elif currentText == 'FFT (Re)':
+        return np.fft.fft(array_in).real
+    elif currentText == 'FFT (Ang)':
+        return np.angle(np.fft.fft(array_in))
+    elif currentText == 'iFFT (Abs)':
+        return np.abs(np.fft.ifft(array_in))
+    elif currentText == 'iFFT (Img)':
+        return np.fft.ifft(array_in).imag
+    elif currentText == 'iFFT (Re)':
+        return np.fft.ifft(array_in).real
+    elif currentText == 'iFFT (Ang)':
+        return np.angle(np.fft.ifft(array_in))
+    else:
+        return array_in
 
 
 class Method(Enum):

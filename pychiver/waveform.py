@@ -28,7 +28,10 @@ class WaveformCollector(ABC):
         Constructor for the abstract WaveformCollector class.
 
         :param PV: name of the PV (or PVs)
-        :param roi_indexes: definition of the Region Of Interest, required a tuple of indexes like (1,10)
+        :param roi_indexes: definition of the Region Of Interest, required a tuple of indexes like (1,10),
+                                use .updateROI() if need to define the ROI in relative units.
+        :param roi_use_on_final: default True, indicates the automatic recalculation of the the defined ROI
+                                    after each acquisition.
         :param callback: call back function to be call on data update, structure: callback(PV=name,
                             dataframe=pandas.dataframe, lastCheck=lastupdatetime)
         :param callback_delay_in_seconds: delay between two callbacks
@@ -55,7 +58,7 @@ class WaveformCollector(ABC):
         """
         if timestamp is None:
             toReturn = self._dataframe.tail(last)
-            self._update_ROI(toReturn)
+            self._recalculate_ROI_value(toReturn)
             return toReturn
         else:
             # TODO use last available value as interpolation strategy
@@ -66,7 +69,7 @@ class WaveformCollector(ABC):
         :return: all buffered waveforms with additional column val_roi, that has an average value in the roi region
         """
         toReturn = self._dataframe.copy()  # TODO to be checked how it goes with the performance
-        self._update_ROI(toReturn)
+        self._recalculate_ROI_value(toReturn)
         return toReturn
 
     def getROITrace(self) -> pandas.DataFrame:
@@ -84,17 +87,30 @@ class WaveformCollector(ABC):
     def getPV(self):
         return self._PV
 
-    def updateROI(self, roi_indexes: tuple):
+    def updateROI(self, roi_indexes: tuple, sample_length=None):
         """
         Updates current settings for ROI
-        :param roi_indexes: a tuple with start and end index
+        :param roi_indexes: a tuple with start and end index, or relative timing if sample_length is defined,
+        :param sample_length: default None, if not None the range of the roi can be provided in the absolute timing.
+                              Should be added in the same unit as provided range.
+                              Eg. roi_indexes in us (200, 300), sample_length=10
         :return: None
         """
         if not isinstance(roi_indexes, tuple) and len(roi_indexes) != 2:
             raise ValueError('Wrong ROI settings provided!')
-        self._roi_indexes = roi_indexes
+        if sample_length is not None and sample_length > 0:
+            self._roi_indexes = (int(roi_indexes[0]/sample_length), int(roi_indexes[1]/sample_length))
+        else:
+            self._roi_indexes = roi_indexes
 
-    def _update_ROI(self, df):
+    def getROI(self):
+        """
+        Returns the actual ROI indexes defined
+        :return:
+        """
+        return self._roi_indexes
+
+    def _recalculate_ROI_value(self, df):
         if self._dataframe.empty:
             return
         if self._roi_use_on_final and self._roi_indexes is not None \
@@ -108,8 +124,16 @@ class WaveformCollector(ABC):
 
 
 class CommonRealTimeWaveformCollector(WaveformCollector):
+    """
+    Class that provides an additional support for the rolling buffer.
+    """
 
     def __init__(self, PV, data_buffer=3 * 60, **kwargs):
+        """
+        :param PV: PV to follow up
+        :param data_buffer: length of the rolling buffer in seconds
+        :param kwargs: any arguments that may be taken by an abstract WaveformCollector
+        """
         super().__init__(PV, **kwargs)
         self._data_buffer = data_buffer
 

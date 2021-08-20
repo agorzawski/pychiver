@@ -1,3 +1,8 @@
+##0.6.1
+- Added/expanded jupyter examples
+- Waveform Collector ROI update/retrieval updated
+- some cleanup on the leftovers (printouts, doc, etc) 
+
 ##0.6.0
 - Fixed waveform support (longer connections timeouts, configurable number of data points)
 - Support for the comparison of the boolean signals (beta)

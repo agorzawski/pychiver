@@ -109,13 +109,15 @@ class Archiver:
         Uses the provided InterpolationStrategy (default one LinearInterpolationStrategy)
 
         :param PVS: list of PVS (string) to be extracted
-        :param start_date:
-        :param end_date:
-        :param time_base: New time base to use, default None, then first PV timestamps' in the set is used. If new provided, use epoch seconds.
+        :param start_date: start date,
+        :param end_date: end date
+        :param time_base: New time base to use, default None, then first PV timestamps' in the set is used.
+                            If new provided, use epoch seconds.
         :param strategy: Interpolation strategy to be used for the aligning, default LinearInterpolationStrategy
-        :param entries_limit: optional, default None, should be a tuple of limits per requested PV
-        :param time_column: optional,
-        :param value_columns: optional,
+        :param entries_limit: optional, default None, should be either a single None or a tuple of limits per requested PV
+        :param time_column: optional, default 'time' column will be used
+        :param value_columns: optional, default 'val' column will be used,
+                     the alignment can be performed for many columns at the same time, provide a tuple.
         :param verbose: default False
         :return: a DataFrame with all PVS and their values
         """
