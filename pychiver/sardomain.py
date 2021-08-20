@@ -11,6 +11,9 @@ import pandas as pd
 
 
 class SARItem:
+    """
+    Top level SAR item, can be anything related to the SAR.
+    """
     def __init__(self, **kwargs):
         if kwargs.get('name', None) is None or kwargs.get('uniqueId', None) is None:
             raise ValueError('Cannot initialise SARItem object without name or uniqueId')
@@ -21,22 +24,34 @@ class SARItem:
     def getType(self) -> str:
         return self.nodeType
 
+    def getName(self) -> str:
+        return self.name
+
     def __repr__(self):
         return '{}/{}'.format(self.name, self.uniqueId)
 
 
 class SARFolder(SARItem):
+    """
+    SAR item for the folder instance
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if kwargs.get('fullPath', None) is None:
             raise ValueError('Cannot initialise SARFolder object without path!')
         self.fullPath = kwargs.get('fullPath')
 
+    def getFullPath(self) -> str:
+        return self.fullPath
+
     def __repr__(self):
         return '[{} - {}]'.format(self.fullPath, self.uniqueId)
 
 
 class SARConfig(SARItem):
+    """
+    SAR item dedicated for a configuration
+    """
     # TODO include the ConfigPV here
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -48,11 +63,14 @@ class SARConfigPV:
         if kwargs.get('configPv', None) is None:
             raise ValueError('Cannot initialise SARConfigPV object without pvName or readbackPvName')
 
-    def __repr__(self):
-        return '{}/{}'.format(self.pvName, self.readbackPvName)
+    # def __repr__(self):
+    #     return '{}/{}'.format(self.pvName, self.readbackPvName)
 
 
 class SARSnapshot(SARItem):
+    """
+    SAR Item dedicated for a given snapshot instance.
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.configPVs = []
@@ -67,8 +85,8 @@ class SARSnapshot(SARItem):
         base = '{}/{}\n'.format(self.name, self.uniqueId)
         if self.properties.get('golden') == 'true':
             base += ' GOLDEN \n'
-        for one in self.configPVs:
-            base += one.pvName + '\n'
+        # for one in self.configPVs:
+        #     base += one.pvName + '\n'
         return base
 
     def getPVs(self) -> list:

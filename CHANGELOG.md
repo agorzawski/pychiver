@@ -1,3 +1,7 @@
+##0.7.0
+- extend SaveAndRestore capabilities
+- 
+
 ##0.6.1
 - Added/expanded jupyter examples
 - Waveform Collector ROI update/retrieval updated
