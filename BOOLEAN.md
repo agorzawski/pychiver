@@ -1,5 +1,7 @@
 ## Examples on *Archiver* utility classes for BOOLEAN PVs
 
+More examples in `examples/Boolean signals.ipynb`
+
 ### init 
 To set up the client, one needs the following call:
 ```python
@@ -20,10 +22,12 @@ pvs = ("RFQ-010:RFS-VacMon-110:Status-Ilck-RB",  # vac 1
        "RFQ-010:RFS-FIM-101:RP2-Ilck-RB")  # reflected power 2
 ```
 
-### compare 
+### compare for close occurrences
 
 ```python
-comparison_result = archiver.compare(pvs, start, end)
+comparison_result = archiver.compare(pvs, start, end, 
+                                     tolerance_in_seconds=0.15,
+                                     compare_edge=Edge.FALLING)
 ```
 
-As a result a `pandas.DataFrame`
+As a result an array with timestamps matching the query is returned.
