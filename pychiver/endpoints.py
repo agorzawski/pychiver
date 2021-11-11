@@ -9,6 +9,8 @@ import warnings
 
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
+from .domain import PVMetaInfo
+
 import pandas
 import json
 import requests
@@ -130,18 +132,33 @@ class JsonEndPointArchiver(EndPoint):
             entries += i['val']
         return entries
 
-    def getPVStatus(self, PV) -> dict:
+    def getPVStatus(self, PV, type=PVMetaInfo.STATUS) -> dict:
         """
+        :param type:
         :param PV:
         :return:
         """
+        if not isinstance(type, PVMetaInfo):
+            raise ValueError('Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo')
         if isinstance(PV, str):
             PV = (PV,)
-        url_to_check = '{}/getPVStatus?pv='.format(self.archiver_url_mgmt)
-        for onePV in PV:
-            url_to_check += onePV + ","
-        returnData = requests.get(url_to_check).json()
-        return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
+        if type == PVMetaInfo.STATUS:
+            url_to_check = '{}/getPVStatus?pv='.format(self.archiver_url_mgmt)
+            for onePV in PV:
+                url_to_check += onePV + ","
+            returnData = requests.get(url_to_check).json()
+            return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
+        if type == PVMetaInfo.INFO:
+            # this end point does not support list
+            url_to_check = '{}/getPVTypeInfo?pv='.format(self.archiver_url_mgmt)
+            returnData = {}
+            for onePV in PV:
+                r = requests.get(url_to_check+onePV)
+                if r.status_code == 200:
+                    returnData[onePV] = r.json()
+                else:
+                    returnData[onePV] = {'pvName': onePV, "status": 'Not being archived'}
+            return returnData
 
     def getEmptyResult(self):
         return pandas.DataFrame(columns=('time', 'val', 'status_label', 'severity_label', 'secs_nanos', 'secs',

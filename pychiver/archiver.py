@@ -33,6 +33,7 @@ import numpy
 
 from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge
 from .endpoints import JsonEndPointArchiver
+from .domain import PVMetaInfo
 import pandas
 
 
@@ -195,13 +196,14 @@ class Archiver:
         # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
-    def check(self, PV: str) -> dict:
+    def check(self, PV: str, type=PVMetaInfo.STATUS) -> dict:
         """
         Provides information on the requested PV(s)
-        :param PV:
+        :param type: STATUS (default) returns info on PVs, INFO returns info on a given PVs
+        :param PV: PVs to check status or info
         :return: dict of PV to its data
         """
-        return self.archiver.getPVStatus(PV)
+        return self.archiver.getPVStatus(PV, type=type)
 
     def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None, verbose=False, waveform_alert=True) \
             -> pandas.DataFrame:
