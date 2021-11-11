@@ -1,7 +1,9 @@
----
-stages:
-  - test
-  - analyse
+include:
+  - "https://gitlab.esss.lu.se/ics-infrastructure/gitlab-ci-yml/raw/master/ArtifactoryPyPI.gitlab-ci.yml"
+
+# stages:
+#   - test
+#   - analyse
 
 unittest:
   stage: test
