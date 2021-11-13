@@ -8,6 +8,16 @@ Authors:
 """
 import pandas
 import pandas as pd
+from enum import Enum, unique
+
+
+@unique
+class NodeType(Enum):
+    NONE = 0
+    FOLDER = 1
+    SAVESET = 2
+    SNAPSHOT = 3
+    VIRTUALSNAPSHOT = 4
 
 
 class SARItem:
@@ -19,7 +29,7 @@ class SARItem:
             raise ValueError('Cannot initialise SARItem object without name or uniqueId')
         self.__dict__ = kwargs
         if kwargs.get('nodeType', None):
-            self.nodeType = 'NONE'
+            self.nodeType = NodeType.NONE
 
     def getType(self) -> str:
         return self.nodeType
@@ -82,9 +92,9 @@ class SARSnapshot(SARItem):
             self.configPVs.append(SARConfigPV(**one))
 
     def __repr__(self):
-        base = '{}/{}\n'.format(self.name, self.uniqueId)
+        base = '{}/{} '.format(self.name, self.uniqueId)
         if self.properties.get('golden') == 'true':
-            base += ' GOLDEN \n'
+            base += ' GOLDEN'
         # for one in self.configPVs:
         #     base += one.pvName + '\n'
         return base
@@ -95,15 +105,64 @@ class SARSnapshot(SARItem):
     def getStoredValues(self) -> pd.DataFrame:
         rowsList = []
         for one in self.configPVs:
-            # print(one.__dict__)
-            # print(one.value)
-            # TODO solve better the JSON heritage in the object... (keys to keys to keys)
-            secs_nanos = one.value.get('time').get('unixSec') + one.value.get('time').get('nanoSec') / 1e9
-            rowsList.append({'PV Name': one.configPv.get('pvName'),
-                             'timestamp': pd.to_datetime(secs_nanos, unit='s'),
-                             'secs_nanos': secs_nanos,
-                             'status_label': one.value.get('alarm').get('status'), # TODO use EpicsStatus codes.py
-                             'severity_label': one.value.get('alarm').get('severity'), # TODO use EpicsSeverity codes.py
-                             'stored_setpoint': one.value.get('value'),
-                             })
+            _append_config(rowsList, one)
         return pd.DataFrame(rowsList)
+
+
+class SARVirtualSnapshot(SARItem):
+    """
+    SAR Item dedicated for a given snapshot instance.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.nodeType = NodeType.VIRTUALSNAPSHOT
+
+        if kwargs.get('properties', None) is None:
+            self.properties = {'golden': 'false'}
+
+        if kwargs.get('snapshots', None) is None or len(kwargs.get('snapshots')) == 0:
+            raise ValueError('Cannot initialise VirtualSnapshot object without linked snapshots!')
+
+        self.snapshots = []
+        for one in kwargs.get('snapshots'):
+            if not isinstance(one, SARSnapshot):
+                raise ValueError('One of the provided snapshots is not a Snapshot!')
+                # TODO maybe just skip?
+
+            # TODO impose PV checks for double definitions, merging strtegy etc...
+            # provide a callback
+            self.snapshots.append(one)
+
+    def __repr__(self):
+        base = 'VIRTUAL: {}/{} '.format(self.name, self.uniqueId)
+        return base
+
+    def getSnapshots(self):
+        return self.snapshots # TODO make sure this will be not mutable (later, once ProofOfConcept done)
+
+    def getPVs(self) -> list:
+        combinedList = []
+        for one in self.snapshots:
+            combinedList.append(one.getPVs())
+        return list(combinedList)
+
+    def getStoredValues(self) -> pd.DataFrame:
+        rowsList = []
+        for oneSnap in self.snapshots:
+            for one in oneSnap.configPVs:
+                _append_config(rowsList, one)
+        return pd.DataFrame(rowsList)
+
+
+def _append_config(rowsList, one: SARConfigPV):
+    # print(one.__dict__)
+    # print(one.value)
+    # TODO solve better the JSON heritage in the object... (keys to keys to keys)
+    secs_nanos = one.value.get('time').get('unixSec') + one.value.get('time').get('nanoSec') / 1e9
+    rowsList.append({'PV Name': one.configPv.get('pvName'),
+                     'timestamp': pd.to_datetime(secs_nanos, unit='s'),
+                     'secs_nanos': secs_nanos,
+                     'status_label': one.value.get('alarm').get('status'),  # TODO use EpicsStatus codes.py
+                     'severity_label': one.value.get('alarm').get('severity'),  # TODO use EpicsSeverity codes.py
+                     'stored_setpoint': one.value.get('value'),
+                     })
