@@ -1,6 +1,8 @@
 ##0.7.0
-- extend SaveAndRestore capabilities
-- 
+- extended SaveAndRestore capabilities
+    - taking snapshots
+    - proper comparison with archived data 
+- cleaned up a bit SAR domain objects (still WIP)
 
 ##0.6.1
 - Added/expanded jupyter examples

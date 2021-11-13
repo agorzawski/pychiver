@@ -145,6 +145,14 @@ class SaveAndRestore:
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
+    def takeSnapshot(self, config: SARConfig = None) -> SARSnapshot:
+        """
+        Prepares a snapshot for a given config.
+        :param config:
+        :return: a mutable snapshot object to be complemented with missing information and saved
+        """
+        raise NotImplementedError("Taking snapshots is not implement yet!")
+
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
         Returns all snapshots for a given config. Either config (SARConfig) or configUniqueId (str) needs to be provided
