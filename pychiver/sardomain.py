@@ -143,7 +143,8 @@ class SARVirtualSnapshot(SARItem):
     def getPVs(self) -> list:
         combinedList = []
         for one in self.snapshots:
-            combinedList.append(one.getPVs())
+            for onePV in one.getPVs():
+                combinedList.append(onePV)
         return list(combinedList)
 
     def getStoredValues(self) -> pd.DataFrame:

@@ -33,6 +33,7 @@ from .timeutils import getDateTimeObj
 import requests
 import epics
 import os
+import uuid
 import pickle
 import warnings
 from datetime import datetime, timedelta
@@ -174,6 +175,19 @@ class SaveAndRestore:
             # print(bb)
             toReturn[a['name']] = SARSnapshot(**{**a, 'snapshotIds': bb})
         return toReturn
+
+    def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:
+        """
+        From the provided snapshots it creates a virtual one, that combines the source.
+        Returns a non editable bundle, that can be treated similarly like other snapshots, e.g. compare or restore.
+        :param name: An unique name to add
+        :param snapshots: a list of snapshots (SARSnapshot)
+        :return: a virtual snapshot
+        """
+        # TODO add creation check process support
+        # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
+        return SARVirtualSnapshot(uniqueId=uuid.uuid4(), name=name,
+                                  snapshots=snapshots)
 
     def getConfigurations(self, useCache=False) -> dict:
         """
