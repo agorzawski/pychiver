@@ -1,8 +1,13 @@
+
 ##0.7.0
 - extended SaveAndRestore capabilities
     - taking snapshots
     - proper comparison with archived data 
 - cleaned up a bit SAR domain objects (still WIP)
+
+##0.6.2
+- Additional information available for `check()` call
+- Added `force_non_archived` flag to extract the data that is not currently being archived, default `False`
 
 ##0.6.1
 - Added/expanded jupyter examples

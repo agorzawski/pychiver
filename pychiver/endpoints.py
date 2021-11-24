@@ -6,9 +6,12 @@ Authors:
 """
 import datetime
 import warnings
+from json import JSONDecodeError
 
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
+from .domain import PVMetaInfo
+
 import pandas
 import json
 import requests
@@ -76,15 +79,19 @@ class JsonEndPointArchiver(EndPoint):
 
     def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None,
                      max_number_of_hours_back=24, verbose=False) -> pandas.DataFrame:
-        jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit,
-                                          iteration=max_number_of_hours_back, verbose=verbose)
-        # TODO think about putting the iterative search for an earlier value up to the Archiver class
-        json_data = jsonReturn['data']
-        dataset = pandas.read_json(json.dumps(json_data))
-        if dataset.empty:
-            warnings.warn('Empty dataset extracted for \'\''.format(PV))
-            return dataset
-        return _fix(dataset, start_date, end_date)
+        try:
+            jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit,
+                                              iteration=max_number_of_hours_back, verbose=verbose)
+            # TODO think about putting the iterative search for an earlier value up to the Archiver class
+            json_data = jsonReturn['data']
+            dataset = pandas.read_json(json.dumps(json_data))
+            if dataset.empty:
+                warnings.warn('Empty dataset extracted for \'\''.format(PV))
+                return dataset
+            return _fix(dataset, start_date, end_date)
+        except JSONDecodeError:
+            warnings.warn('No data returned in the requested date range, returning empty dataset!')
+            return self.getEmptyResult()
 
     def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None,
                         entries_warning_limit=5000, iteration=24, verbose=False) -> dict:
@@ -130,18 +137,33 @@ class JsonEndPointArchiver(EndPoint):
             entries += i['val']
         return entries
 
-    def getPVStatus(self, PV) -> dict:
+    def getPVStatus(self, PV, type=PVMetaInfo.STATUS) -> dict:
         """
+        :param type:
         :param PV:
         :return:
         """
+        if not isinstance(type, PVMetaInfo):
+            raise ValueError('Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo')
         if isinstance(PV, str):
             PV = (PV,)
-        url_to_check = '{}/getPVStatus?pv='.format(self.archiver_url_mgmt)
-        for onePV in PV:
-            url_to_check += onePV + ","
-        returnData = requests.get(url_to_check).json()
-        return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
+        if type == PVMetaInfo.STATUS:
+            url_to_check = '{}/getPVStatus?pv='.format(self.archiver_url_mgmt)
+            for onePV in PV:
+                url_to_check += onePV + ","
+            returnData = requests.get(url_to_check).json()
+            return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
+        if type == PVMetaInfo.INFO:
+            # this end point does not support list
+            url_to_check = '{}/getPVTypeInfo?pv='.format(self.archiver_url_mgmt)
+            returnData = {}
+            for onePV in PV:
+                r = requests.get(url_to_check+onePV)
+                if r.status_code == 200:
+                    returnData[onePV] = r.json()
+                else:
+                    returnData[onePV] = {'pvName': onePV, "status": 'Not being archived'}
+            return returnData
 
     def getEmptyResult(self):
         return pandas.DataFrame(columns=('time', 'val', 'status_label', 'severity_label', 'secs_nanos', 'secs',
