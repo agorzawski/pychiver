@@ -1,3 +1,7 @@
+##0.6.2
+- Additional information available for `check()` call
+- Added `force_non_archived` flag to extract the data that is not currently being archived, default `False`
+
 ##0.6.1
 - Added/expanded jupyter examples
 - Waveform Collector ROI update/retrieval updated

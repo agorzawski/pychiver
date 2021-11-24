@@ -6,6 +6,7 @@ Authors:
 """
 import datetime
 import warnings
+from json import JSONDecodeError
 
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
@@ -78,15 +79,19 @@ class JsonEndPointArchiver(EndPoint):
 
     def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None,
                      max_number_of_hours_back=24, verbose=False) -> pandas.DataFrame:
-        jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit,
-                                          iteration=max_number_of_hours_back, verbose=verbose)
-        # TODO think about putting the iterative search for an earlier value up to the Archiver class
-        json_data = jsonReturn['data']
-        dataset = pandas.read_json(json.dumps(json_data))
-        if dataset.empty:
-            warnings.warn('Empty dataset extracted for \'\''.format(PV))
-            return dataset
-        return _fix(dataset, start_date, end_date)
+        try:
+            jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit,
+                                              iteration=max_number_of_hours_back, verbose=verbose)
+            # TODO think about putting the iterative search for an earlier value up to the Archiver class
+            json_data = jsonReturn['data']
+            dataset = pandas.read_json(json.dumps(json_data))
+            if dataset.empty:
+                warnings.warn('Empty dataset extracted for \'\''.format(PV))
+                return dataset
+            return _fix(dataset, start_date, end_date)
+        except JSONDecodeError:
+            warnings.warn('No data returned in the requested date range, returning empty dataset!')
+            return self.getEmptyResult()
 
     def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None,
                         entries_warning_limit=5000, iteration=24, verbose=False) -> dict:
