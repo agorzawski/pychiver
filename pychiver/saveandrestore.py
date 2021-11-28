@@ -210,12 +210,31 @@ class SaveAndRestore:
         # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
         raise NotImplementedError('Not implemented yet!')
 
-    def compare(self, snapshot: SARSnapshot = None, date_time=None, verbose=False) -> pandas.DataFrame:
+    def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, verbose=False,
+                        timeout=1) -> bool:
+        """
+        Provides the true/false result of the comparison for a given snapshot.
+        True, when all the live/archived values match the ones that are saved.
+        False, when one (or more) saved values does not match the read values
+
+        :param timeout:
+        :param verbose:
+        :param date_time:
+        :param snapshot: existing snapshot,
+        :date_time: default None
+        :return: True/False
+        """
+        comparisonResult = self.compare(snapshot=snapshot, date_time=date_time, verbose=verbose, timeout=timeout)
+        comparisonResult = comparisonResult[~comparisonResult['delta'].between(0, 0)]
+        return len(comparisonResult) == 0
+
+    def compare(self, snapshot: SARSnapshot = None, date_time=None, verbose=False, timeout=1) -> pandas.DataFrame:
         """
         Provides the way of comparing a snapshot to the:
          - live values, that are retrieved by pyepics.
          - archived values in the archiver at given date_time
 
+        :param timeout:
         :param verbose:
         :param date_time:
         :param snapshot: existing snapshot,
@@ -225,7 +244,7 @@ class SaveAndRestore:
         df = snapshot.getStoredValues()
         if date_time is None:
             # TODO add some comperror support
-            values = self.epics.caget_many(pvlist=snapshot.getPVs())  # TODO check order PVs
+            values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)  # TODO check order PVs
             # print(values)
             df['live_values'] = values
             df['archived_values'] = math.nan
@@ -250,20 +269,23 @@ class SaveAndRestore:
             raise NotImplementedError("Not implemented until the end!")
         return df
 
-    def restore(self, snapshot: SARSnapshot = None):
+    def restore(self, snapshot: SARSnapshot = None, timeout=1):
         """
         Sets the PVs to their values as provided in the snapshot
 
+        :param timeout:
         :param snapshot:
         :return:
         """
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError('For restore an SARSnapshot is required!')
-        # TODO get PV names/values from snapshot
-        pvsToPut = []
-        valuesToPut = []
-        # TODO add some error support
-        self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut)
+        try:
+            pvsToPut = [one['configPv']['pvName'] for one in snapshot.snapshotIds ]
+            valuesToPut = [one['value']['value'] for one in snapshot.snapshotIds ]
+            print(pvsToPut, valuesToPut)
+            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, timeout=timeout)
+        except Exception:
+            warnings.warn('Something went wrong. Values not set.')
         return 0
 
     def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None):
