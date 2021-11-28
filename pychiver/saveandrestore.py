@@ -257,7 +257,7 @@ class SaveAndRestore:
             df['live_values'] = values
             df['archived_values'] = math.nan
             try:
-                df['delta'] = df['stored_setpoint'] - df['live_values']
+                df['delta'] = df['stored_value'] - df['live_values']
             except:
                 warnings.warn("Some error occurred during the delta calculation, skipping")
 

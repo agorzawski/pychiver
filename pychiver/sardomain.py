@@ -160,10 +160,10 @@ def _append_config(rowsList, one: SARConfigPV):
     # print(one.value)
     # TODO solve better the JSON heritage in the object... (keys to keys to keys)
     secs_nanos = one.value.get('time').get('unixSec') + one.value.get('time').get('nanoSec') / 1e9
-    rowsList.append({'PV Name': one.configPv.get('pvName'),
+    rowsList.append({'pv_name': one.configPv.get('pvName'),
                      'timestamp': pd.to_datetime(secs_nanos, unit='s'),
                      'secs_nanos': secs_nanos,
                      'status_label': one.value.get('alarm').get('status'),  # TODO use EpicsStatus codes.py
                      'severity_label': one.value.get('alarm').get('severity'),  # TODO use EpicsSeverity codes.py
-                     'stored_setpoint': one.value.get('value'),
+                     'stored_value': one.value.get('value'),
                      })
