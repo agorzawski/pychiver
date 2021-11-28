@@ -154,6 +154,14 @@ class SaveAndRestore:
         """
         raise NotImplementedError("Taking snapshots is not implement yet!")
 
+    def getSnapshot(self, snapshotId: str = None) -> SARSnapshot:
+
+        aa = self.service.getChildren(uniqueId=snapshotId)
+        print(aa)
+        bb = self.service.getItems(snapshotId)
+        print(bb)
+        return SARSnapshot(**{'snapshotIds': bb})
+
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
         Returns all snapshots for a given config. Either config (SARConfig) or configUniqueId (str) needs to be provided

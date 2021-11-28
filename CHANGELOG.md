@@ -2,7 +2,9 @@
 ##0.7.0
 - extended SaveAndRestore capabilities
     - taking snapshots
-    - proper comparison with archived data 
+    - proper comparison with archived data
+    - get snapshots by snashotId
+    - compare and comparisonDetails
 - cleaned up a bit SAR domain objects (still WIP)
 
 ##0.6.2
