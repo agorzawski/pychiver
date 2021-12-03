@@ -1,3 +1,6 @@
+##0.6.3
+- ArchiverWaveformCollector `force_non_archived` exposed
+
 ##0.6.2
 - Additional information available for `check()` call
 - Added `force_non_archived` flag to extract the data that is not currently being archived, default `False`
