@@ -73,18 +73,16 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         json_data = requests.get(self.service_url_root).json()
         return SARItem(**json_data)
 
-    def getConfigurations(self, uniqueId, mainTree, path=''):
+    def getAllNodes(self, uniqueId, mainTree, path='', nodeType=NodeType.CONFIGURATION):
         currentLevel = self.getChildren(uniqueId=uniqueId)
         if len(currentLevel):
             for one in currentLevel:
-                if one['nodeType'] == 'SNAPSHOT':
-                    pass
                 currentPath = path + one['name'] + '/'
-                if one['nodeType'] == 'CONFIGURATION':
+                if one['nodeType'] == nodeType.name:
                     mainTree[SARFolder(fullPath=currentPath, uniqueId=one['uniqueId'], name=one['name'])] = SARConfig(
                         **one)
 
-                self.getConfigurations(one['uniqueId'], mainTree, path=currentPath)
+                self.getAllNodes(one['uniqueId'], mainTree, path=currentPath, nodeType=nodeType)
         else:
             pass
 
@@ -210,7 +208,7 @@ class SaveAndRestore:
         return SARVirtualSnapshot(uniqueId=uuid.uuid4(), name=name,
                                   snapshots=snapshots)
 
-    def getConfigurations(self, useCache=False) -> dict:
+    def getAll(self, useCache=False, nodeType=NodeType.CONFIGURATION) -> dict:
         """
         Returns all configurations found in the system. If useCache is True, it retrieves it from the local file.
 
@@ -219,7 +217,7 @@ class SaveAndRestore:
         """
         configurations = {}
         if not useCache:
-            self.service.getConfigurations(self.service.getRoot().uniqueId, configurations)
+            self.service.getAllNodes(self.service.getRoot().uniqueId, configurations, nodeType=nodeType)
             self._updateCache(configurations)
             return configurations
         else:

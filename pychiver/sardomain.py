@@ -15,7 +15,7 @@ from enum import Enum, unique
 class NodeType(Enum):
     NONE = 0
     FOLDER = 1
-    SAVESET = 2
+    CONFIGURATION = 2
     SNAPSHOT = 3
     VIRTUALSNAPSHOT = 4
 
