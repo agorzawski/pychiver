@@ -103,6 +103,12 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     toReturn.append(forcedTypeTuple[1](**one))
             return toReturn
 
+    def getParent(self, uniqueId=None):
+        if uniqueId is None:
+            raise ValueError('Cannot get search for None element! Provide unique ID!')
+        urlToGet = self.url_parent.format(uniqueId)
+        return requests.get(urlToGet).json()
+
     def getItems(self, uniqueId):
         r = requests.get(self.url_config_items.format(uniqueId))
         return r.json()
@@ -136,6 +142,7 @@ class SaveAndRestore:
         self.service = DefaultImplementation(service_url=service_url)
         self.epics = epics
         self.cachedConfigurations = {}
+        self.cacheFile = None
         if cacheFile is not None:
             self.cacheFile = cacheFile
             try:
@@ -154,13 +161,20 @@ class SaveAndRestore:
         """
         raise NotImplementedError("Taking snapshots is not implement yet!")
 
-    def getSnapshot(self, snapshotId: str = None) -> SARSnapshot:
-
-        aa = self.service.getChildren(uniqueId=snapshotId)
-        print(aa)
-        bb = self.service.getItems(snapshotId)
-        print(bb)
-        return SARSnapshot(**{'snapshotIds': bb})
+    def getSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARSnapshot:
+        """
+        Returns one snapshot by provided unique ID
+        :param snapshotName: individual snapshot name
+        :param snapshotId: individual snapshot ID
+        :return: snapshot
+        """
+        if snapshotName is not None:
+            raise NotImplementedError("Search by name is not Implemented yet")
+        parentInfo = self.service.getParent(uniqueId=snapshotId)
+        allInParentConfig = self.service.getChildren(uniqueId=parentInfo['uniqueId'])
+        for one in allInParentConfig:
+            if one['uniqueId'] == snapshotId:
+                return SARSnapshot(**{**one, 'snapshotIds': self.service.getItems(one['uniqueId'])})
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
@@ -175,13 +189,12 @@ class SaveAndRestore:
         # TODO add support for full configs
         # TODO add support for config names
         # configFullPath =
-        aa = self.service.getChildren(uniqueId=configUniqueId)
+        allInParentConfig = self.service.getChildren(uniqueId=configUniqueId)
         toReturn = {}
-        for a in aa:
-            bb = self.service.getItems(a['uniqueId'])
+        for one in allInParentConfig:
+            bb = self.service.getItems(one['uniqueId'])
             # TODO log the data to the console
-            # print(bb)
-            toReturn[a['name']] = SARSnapshot(**{**a, 'snapshotIds': bb})
+            toReturn[one['name']] = SARSnapshot(**{**one, 'snapshotIds': bb})
         return toReturn
 
     def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:
