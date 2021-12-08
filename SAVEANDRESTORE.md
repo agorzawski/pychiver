@@ -3,13 +3,13 @@
 
 This is a prototype for the python service connection for 
 
-###To set up the client, all one needs is the following call:
+### To set up the client, all one needs is the following call:
 ```python
 from pychiver.saveandrestore import SaveAndRestore
 sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se")
 ```
 
-###To get all nodes of given type:
+### To get all nodes of given type:
 
 ```python
 configurations = sar.getAll()
@@ -17,14 +17,14 @@ configurations = sar.getAll()
 configurations = sar.getAll(nodeType=NodeType.SNAPSHOT)
 ```
 
-###To get all snapshots for a given configuration:
+### To get all snapshots for a given configuration:
 
 ```python
 sar.getSnapshots(configUniqueId='NameOfConfig')
 # returns a dict of snapshot name to DataFrame with snapshot values
 ```
 
-###To get a specific snapshot:
+### To get a specific snapshot:
 
 ```python
 sar.getSnapshot(snapshotId='5314e53b-b7c1-432c-b996-0733f28fd15c')
@@ -32,7 +32,7 @@ sar.getSnapshot(snapshotId='5314e53b-b7c1-432c-b996-0733f28fd15c')
 ```
 
 
-###To compare
+### To compare
 
 **Live values**, with `pyepics`:
 ```python
@@ -56,7 +56,7 @@ status = sar.compare(snapshot=some_snapshot, date_time="2021-07-01 21:21:21")
 #returns pandas.DataFrame with setPoint values and current values and with deltas
 ```
 
-###To restore:
+### To restore:
 ```python
 status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
