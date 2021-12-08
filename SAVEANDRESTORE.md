@@ -57,13 +57,18 @@ status = sar.compare(snapshot=some_snapshot, date_time="2021-07-01 21:21:21")
 ```
 
 ### To restore:
+
+> **NOTE** the restore (pvput) action is executed where the client package is running. **You not have a privilege** (due to the network configuration) to successfully execute your call. 
 ```python
 status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
 ```
 
 ### To create new snapshot:
+> **NOTE** WIP, not implemented yet
+
 ```python
-sar.save(config=some_config, snapshot=some_snapshot, new_name='SomeNewName')
-# TODO WIP still under implementation
+sar.save(config=some_config, snapshotName='SomeNewName', comment='SomeComment')
+#or
+sar.save(snapshot=some_snapshot, snapshotName='SomeNewName', comment='SomeComment')
 ```
