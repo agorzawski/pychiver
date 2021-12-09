@@ -1,69 +1,72 @@
 
-##0.7.0
+## 0.7.0
 - extended SaveAndRestore capabilities
-    - taking snapshots
-    - proper comparison with archived data
-    - get snapshots by snashotId
+    - get snapshots/configurations names/ids
+    - get snapshots by snapshotId or by snapshotName
     - compare and comparisonDetails
+    - proper comparison with live data
+    - proper comparison with archived data  
+    - creation of virtual snapshots
 - cleaned up a bit SAR domain objects (still WIP)
+- cleaned up a bit archiver classes
 
-##0.6.3
+## 0.6.3
 - ArchiverWaveformCollector `force_non_archived` exposed
 
-##0.6.2
+## 0.6.2
 - Additional information available for `check()` call
 - Added `force_non_archived` flag to extract the data that is not currently being archived, default `False`
 
-##0.6.1
+## 0.6.1
 - Added/expanded jupyter examples
 - Waveform Collector ROI update/retrieval updated
 - some cleanup on the leftovers (printouts, doc, etc) 
 
-##0.6.0
+## 0.6.0
 - Fixed waveform support (longer connections timeouts, configurable number of data points)
 - Support for the comparison of the boolean signals (beta)
 
-##0.5.4
+## 0.5.4
 - ManyPVWaveformCollector fixed and available
 
-##0.5.3
+## 0.5.3
 - Included auto search for the last stored value in case the value in the requested window does not exist.
 
 
-##0.5.2
+## 0.5.2
 - bug fixed the entries limit handling
 - bug fixed the empty dataframe handling
 
 
-##0.5.1
+## 0.5.1
 - LastAcquiredValue interpolation strategy
 - collectors with exposed two methods: getPV() and clear()
 - ManyPVWaveformCollector
 
-##0.5.0
+## 0.5.0
 - waveform collectors (Archiver and Realtime)
 
-##0.4.0
+## 0.4.0
 - added first support for the save and restore
   - configuration/snapshots lists 
   - snapshot details
   - snapshot restore (WIP)
 
-##0.3.1
+## 0.3.1
 - included description of the EPICS status codes
 - included warning when extracting the waveforms
 
-##0.3.0
+## 0.3.0
 - improved the `archiver.get()`
 - introduced `archiver.getAligned()`
 - PV status check `archiver.check()`
 - moving average `archiver.getMovingAverage()`
 - simplified init with a single url
 
-##0.2.0
+## 0.2.0
 - simple get for one or many PVs
 - abstraction for possible different implementations
 
-##0.1.0
+## 0.1.0
 - initial import
 - time stamps utils

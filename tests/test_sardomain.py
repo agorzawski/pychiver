@@ -31,10 +31,10 @@ class TestSARItems(unittest.TestCase):
             SARSnapshot(**SIMPLE_JSON_EXAMPLE)
 
     def test_correct_init_snapshot(self):
-        ll = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, 'snapshotIds': JSON_FOR_CONFIG_PVS})
+        ll = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, 'snapshotConfigPVs': JSON_FOR_CONFIG_PVS})
 
     def test_correct_snapshot_build_dataframe(self):
-        ll = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, 'snapshotIds': JSON_FOR_CONFIG_PVS})
+        ll = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, 'snapshotConfigPVs': JSON_FOR_CONFIG_PVS})
         print(ll.getStoredValues())
 
     def test_incorrect_init_configpv(self):
