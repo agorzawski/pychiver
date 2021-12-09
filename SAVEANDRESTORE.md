@@ -41,7 +41,7 @@ sar.getSnapshot(snapshotName='Some name of the snapshot')
 #### To create a virtual snapshot
 
 ```python
-vSnapshot = createVirtualSnapshot(self, name, snapshots)
+vSnapshot = sar.createVirtualSnapshot(self, name, snapshots)
 ```
 
 ### Actions
@@ -77,13 +77,20 @@ status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
 ```
 
-#### To create new snapshot:
+#### To take/ save new snapshot:
 > **NOTE** WIP, not implemented yet
 
 ```python
-sar.save(config=some_config, snapshotName='SomeNewName', comment='SomeComment')
+some_snapshot = sar.takeSnapshot(config=some_config)
+some_snapshot_retake = sar.takeSnapshot(snapshot=some_snapshot)
+```
+
+```python
+sar.save(config=some_config, snapshotName='Some New Name for the Snapshot', comment='Some Comment')
 #or
-sar.save(snapshot=some_snapshot, snapshotName='SomeNewName', comment='SomeComment')
+sar.save(snapshot=some_snapshot, nodeType=NodeType.SNAPSHOT)
+#or
+sar.save(snapshot=some_snapshot, nodeType=NodeType.VIRTUAL_SNAPSHOT)
 ```
 
 

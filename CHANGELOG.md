@@ -3,9 +3,9 @@
 - extended SaveAndRestore capabilities
     - get snapshots/configurations names/ids
     - get snapshots by snapshotId or by snapshotName
-    - compare and comparisonDetails
+    - compare and comparisonDetails on snapshots and virtual snapshots
     - proper comparison with live data
-    - proper comparison with archived data  
+    - proper comparison with archived data  (still WIP)
     - creation of virtual snapshots
 - cleaned up a bit SAR domain objects (still WIP)
 - cleaned up a bit archiver classes

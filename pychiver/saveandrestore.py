@@ -152,9 +152,10 @@ class SaveAndRestore:
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
-    def takeSnapshot(self, config: SARConfig = None) -> SARSnapshot:
+    def takeSnapshot(self, config: SARConfig = None, snapshot: SARSnapshot = None) -> SARSnapshot:
         """
         Prepares a snapshot for a given config.
+        :param snapshot:
         :param config:
         :return: a mutable snapshot object to be complemented with missing information and saved
         """
@@ -169,7 +170,7 @@ class SaveAndRestore:
         :raises ValueError if no snapshot found for the given snapshotId or snapshotName
         """
         if snapshotName is not None and snapshotId is not None:
-            raise NotImplementedError("Cannot use both criterias (snaphotId or snapshotName)")
+            raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
         if snapshotId is not None:
             try:
                 parentInfo = self.service.getParent(uniqueId=snapshotId)
@@ -311,14 +312,14 @@ class SaveAndRestore:
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError('For restore an SARSnapshot is required!')
         try:
-            pvsToPut = [one['configPv']['pvName'] for one in snapshot.snapshotConfigPVs ]
-            valuesToPut = [one['value']['value'] for one in snapshot.snapshotConfigPVs ]
+            pvsToPut = [one['configPv']['pvName'] for one in snapshot.snapshotConfigPVs]
+            valuesToPut = [one['value']['value'] for one in snapshot.snapshotConfigPVs]
             self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)
         except Exception:
             warnings.warn('Something went wrong. Values not set.')
         return 0
 
-    def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None):
+    def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None, nodeType=NodeType.SNAPSHOT):
         # TODO to be implemented, to be found in the REST Api how to do it
         raise NotImplementedError('Not implemented yet!')
 
