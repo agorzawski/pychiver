@@ -166,13 +166,21 @@ class SaveAndRestore:
         :param snapshotId: individual snapshot ID
         :return: snapshot
         """
+        if snapshotName is not None and snapshotId is not None:
+            raise NotImplementedError("Cannot use both criterias (snaphotId or snapshotName)")
+        if snapshotId is not None:
+            parentInfo = self.service.getParent(uniqueId=snapshotId)
+            allInParentConfig = self.service.getChildren(uniqueId=parentInfo['uniqueId'])
+            for one in allInParentConfig:
+                if one['uniqueId'] == snapshotId:
+                    return SARSnapshot(**{**one, 'snapshotConfigPVs': self.service.getItems(one['uniqueId'])})
         if snapshotName is not None:
-            raise NotImplementedError("Search by name is not Implemented yet")
-        parentInfo = self.service.getParent(uniqueId=snapshotId)
-        allInParentConfig = self.service.getChildren(uniqueId=parentInfo['uniqueId'])
-        for one in allInParentConfig:
-            if one['uniqueId'] == snapshotId:
-                return SARSnapshot(**{**one, 'snapshotConfigPVs': self.service.getItems(one['uniqueId'])})
+            allSnapshots = self.getAll(nodeType=NodeType.SNAPSHOT)
+            # TODO add finding the last one
+            for one in allSnapshots.values():
+                if snapshotName in one.name:
+                    return self.getSnapshot(snapshotId=one.uniqueId)
+        raise ValueError('Cannot find the snapshot for a provided snapshotId or snapshotName')
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """

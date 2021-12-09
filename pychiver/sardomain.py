@@ -179,8 +179,6 @@ class SARVirtualSnapshot(SARItem):
 
 
 def _append_config(rowsList, one: SARConfigPV):
-    # print(one.__dict__)
-    # print(one.value)
     # TODO solve better the JSON heritage in the object... (keys to keys to keys)
     secs_nanos = one.value.get('time').get('unixSec') + one.value.get('time').get('nanoSec') / 1e9
     rowsList.append({'pv_name': one.configPv.get('pvName'),
