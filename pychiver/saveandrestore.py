@@ -25,6 +25,7 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
 import math
+from json import JSONDecodeError
 
 from .sardomain import *
 from .archiver import Archiver
@@ -165,15 +166,19 @@ class SaveAndRestore:
         :param snapshotName: individual snapshot name
         :param snapshotId: individual snapshot ID
         :return: snapshot
+        :raises ValueError if no snapshot found for the given snapshotId or snapshotName
         """
         if snapshotName is not None and snapshotId is not None:
             raise NotImplementedError("Cannot use both criterias (snaphotId or snapshotName)")
         if snapshotId is not None:
-            parentInfo = self.service.getParent(uniqueId=snapshotId)
-            allInParentConfig = self.service.getChildren(uniqueId=parentInfo['uniqueId'])
-            for one in allInParentConfig:
-                if one['uniqueId'] == snapshotId:
-                    return SARSnapshot(**{**one, 'snapshotConfigPVs': self.service.getItems(one['uniqueId'])})
+            try:
+                parentInfo = self.service.getParent(uniqueId=snapshotId)
+                allInParentConfig = self.service.getChildren(uniqueId=parentInfo['uniqueId'])
+                for one in allInParentConfig:
+                    if one['uniqueId'] == snapshotId:
+                        return SARSnapshot(**{**one, 'snapshotConfigPVs': self.service.getItems(one['uniqueId'])})
+            except JSONDecodeError:
+                warnings.warn('Something went wrong with finding the provided snapshotId=\'{}\''.format(snapshotId))
         if snapshotName is not None:
             allSnapshots = self.getAll(nodeType=NodeType.SNAPSHOT)
             # TODO add finding the last one

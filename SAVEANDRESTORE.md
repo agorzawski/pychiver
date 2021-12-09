@@ -29,14 +29,13 @@ sar.getSnapshots(configUniqueId='configUniqueId')
 ```
 
 #### To get a specific snapshot:
-
+> NOTE: this call will raise `ValueError` if no snapshot is found!
 ```python
 sar.getSnapshot(snapshotId='5314e53b-b7c1-432c-b996-0733f28fd15c')
 # returns a snapshot
 
 sar.getSnapshot(snapshotName='Some name of the snapshot')
 # returns a snapshot, if more than one found with the same name, it returns the most recent one.
-
 ```
 
 #### To create a virtual snapshot
