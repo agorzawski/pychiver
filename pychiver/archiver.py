@@ -72,7 +72,7 @@ class Archiver:
         """
         useSeparateLimits = False
 
-        if isinstance(PV, tuple) or isinstance(PV, list):
+        if isinstance(PV, (tuple, list)):
             if isinstance(entries_limit, tuple) and len(entries_limit) == len(PV):
                 useSeparateLimits = True
             dataToReturn = {}
