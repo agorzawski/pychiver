@@ -172,7 +172,7 @@ class SaveAndRestore:
         allInParentConfig = self.service.getChildren(uniqueId=parentInfo['uniqueId'])
         for one in allInParentConfig:
             if one['uniqueId'] == snapshotId:
-                return SARSnapshot(**{**one, 'snapshotIds': self.service.getItems(one['uniqueId'])})
+                return SARSnapshot(**{**one, 'snapshotConfigPVs': self.service.getItems(one['uniqueId'])})
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
@@ -192,7 +192,7 @@ class SaveAndRestore:
         for one in allInParentConfig:
             bb = self.service.getItems(one['uniqueId'])
             # TODO log the data to the console
-            toReturn[one['name']] = SARSnapshot(**{**one, 'snapshotIds': bb})
+            toReturn[one['name']] = SARSnapshot(**{**one, 'snapshotConfigPVs': bb})
         return toReturn
 
     def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:
@@ -264,7 +264,6 @@ class SaveAndRestore:
         if date_time is None:
             # TODO add some comperror support
             values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)  # TODO check order PVs
-            # print(values)
             df['live_values'] = values
             df['archived_values'] = math.nan
             try:
@@ -276,6 +275,7 @@ class SaveAndRestore:
             if self._archiver is None:
                 raise ValueError('Service not instantiated with the archiver link. Cannot perform that action!')
             date_time_to_consider = getDateTimeObj(date_time)
+            print(date_time_to_consider)
             startD = date_time_to_consider - timedelta(seconds=1)  # TODO archiver window to consider?
             endD = date_time_to_consider + timedelta(seconds=1)
             data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD, verbose=verbose)
@@ -288,21 +288,19 @@ class SaveAndRestore:
             raise NotImplementedError("Not implemented until the end!")
         return df
 
-    def restore(self, snapshot: SARSnapshot = None, timeout=1):
+    def restore(self, snapshot: SARSnapshot = None, **kwargs):
         """
         Sets the PVs to their values as provided in the snapshot
 
-        :param timeout:
         :param snapshot:
         :return:
         """
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError('For restore an SARSnapshot is required!')
         try:
-            pvsToPut = [one['configPv']['pvName'] for one in snapshot.snapshotIds ]
-            valuesToPut = [one['value']['value'] for one in snapshot.snapshotIds ]
-            print(pvsToPut, valuesToPut)
-            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, timeout=timeout)
+            pvsToPut = [one['configPv']['pvName'] for one in snapshot.snapshotConfigPVs ]
+            valuesToPut = [one['value']['value'] for one in snapshot.snapshotConfigPVs ]
+            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)
         except Exception:
             warnings.warn('Something went wrong. Values not set.')
         return 0

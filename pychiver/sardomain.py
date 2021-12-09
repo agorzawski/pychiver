@@ -17,13 +17,14 @@ class NodeType(Enum):
     FOLDER = 1
     CONFIGURATION = 2
     SNAPSHOT = 3
-    VIRTUALSNAPSHOT = 4
+    VIRTUAL_SNAPSHOT = 4
 
 
 class SARItem:
     """
     Top level SAR item, can be anything related to the SAR.
     """
+
     def __init__(self, **kwargs):
         if kwargs.get('name', None) is None or kwargs.get('uniqueId', None) is None:
             raise ValueError('Cannot initialise SARItem object without name or uniqueId')
@@ -45,6 +46,7 @@ class SARFolder(SARItem):
     """
     SAR item for the folder instance
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if kwargs.get('fullPath', None) is None:
@@ -62,6 +64,7 @@ class SARConfig(SARItem):
     """
     SAR item dedicated for a configuration
     """
+
     # TODO include the ConfigPV here
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -71,10 +74,10 @@ class SARConfigPV:
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
         if kwargs.get('configPv', None) is None:
-            raise ValueError('Cannot initialise SARConfigPV object without pvName or readbackPvName')
+            raise ValueError('Cannot initialise SARConfigPV object without pvName or readbackPvName in the configPV')
 
-    # def __repr__(self):
-    #     return '{}/{}'.format(self.pvName, self.readbackPvName)
+    def __repr__(self):
+        return '{}/{}'.format(self.configPv['pvName'], self.configPv['readbackPvName'])
 
 
 class SARSnapshot(SARItem):
@@ -84,23 +87,25 @@ class SARSnapshot(SARItem):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.configPVs = []
-        if kwargs.get('snapshotIds', None) is None:
+        if kwargs.get('snapshotConfigPVs', None) is None:
             raise ValueError('Cannot initialise SARSnapshot object without configPvs!')
         if kwargs.get('properties', None) is None:
             self.properties = {'golden': 'false'}
-        for one in kwargs.get('snapshotIds'):
+        for one in kwargs.get('snapshotConfigPVs'):
             self.configPVs.append(SARConfigPV(**one))
 
     def __repr__(self):
         base = '{}/{} '.format(self.name, self.uniqueId)
         if self.properties.get('golden') == 'true':
             base += ' GOLDEN'
-        # for one in self.configPVs:
-        #     base += one.pvName + '\n'
         return base
 
     def getPVs(self) -> list:
-        return list([o.configPv.get('pvName') for o in self.configPVs])
+        return list([o.configPv.get('pvName', []) for o in self.configPVs])
+
+    @property
+    def getConfigPVs(self) -> list:
+        return self.configPVs
 
     def getStoredValues(self) -> pd.DataFrame:
         rowsList = []
@@ -113,9 +118,10 @@ class SARVirtualSnapshot(SARItem):
     """
     SAR Item dedicated for a given snapshot instance.
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.nodeType = NodeType.VIRTUALSNAPSHOT
+        self.nodeType = NodeType.VIRTUAL_SNAPSHOT
 
         if kwargs.get('properties', None) is None:
             self.properties = {'golden': 'false'}
@@ -138,7 +144,8 @@ class SARVirtualSnapshot(SARItem):
         return base
 
     def getSnapshots(self):
-        return self.snapshots # TODO make sure this will be not mutable (later, once ProofOfConcept done)
+        # TODO make sure this will be not mutable (later, once ProofOfConcept done)
+        return self.snapshots
 
     def getPVs(self) -> list:
         combinedList = []
@@ -153,6 +160,22 @@ class SARVirtualSnapshot(SARItem):
             for one in oneSnap.configPVs:
                 _append_config(rowsList, one)
         return pd.DataFrame(rowsList)
+
+    @property
+    def snapshotConfigPVs(self):
+        combinedList = []
+        for one in self.snapshots:
+            for onePV in one.snapshotConfigPVs:
+                combinedList.append(onePV)
+        return list(combinedList)
+
+    @property
+    def getConfigPVs(self) -> list:
+        combinedList = []
+        for one in self.snapshots:
+            for onePV in one.configPVs:
+                combinedList.append(onePV)
+        return list(combinedList)
 
 
 def _append_config(rowsList, one: SARConfigPV):
