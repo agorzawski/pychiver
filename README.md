@@ -102,16 +102,10 @@ data = archiver.check("RFQ-010:RFS-Kly-110:Oil-Tmp")
 
 # Installation
 
-```commandline
-$ git clone <repo_url/pychiver>
-$ cd pychiver
-$ pip install .
-```
- 
-or 
+From the ESS artifactory:
 
 ```commandline
-# WIP on artifactory release 
+pip install pychiver
 ```
 
 ## Extra environmental configuration
