@@ -25,10 +25,10 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
     if end_date is None:
         end_date = datetime.datetime.now()
 
-    if not isinstance(start_date, datetime.datetime) and not isinstance(start_date, str):
+    if not isinstance(start_date, (datetime.datetime, str)):
         raise ValueError('Wrong start_date format (neither date time nor string)!')
 
-    if not isinstance(end_date, datetime.datetime) and not isinstance(end_date, str):
+    if not isinstance(end_date, (datetime.datetime, str)):
         raise ValueError('Wrong end_date format (neither date time nor string)!')
 
     return getDateTimeObj(start_date), getDateTimeObj(end_date)

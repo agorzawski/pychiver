@@ -105,7 +105,7 @@ class JsonEndPointArchiver(EndPoint):
         entries = self._countEntries(PV, start_date_str, end_date_str)
         # TODO see if the recursive call should be here
         if entries_limit is None:
-            entries_limit = entries
+            entries_limit = max(entries, 1)
         if entries > entries_warning_limit:
             warnings.warn(
                 'You are about to extract {} samples, this operation may take significant amount of time...'.format(
@@ -116,7 +116,7 @@ class JsonEndPointArchiver(EndPoint):
         # except ZeroDivisionError:
         #     return
         toReturn = requests.get(nth_url).json()
-        if len(toReturn[0].get('data', [])) == 0:
+        if not len(toReturn) or not len(toReturn[0].get('data', [])):
             return self._getJSONRequest(PV, start_date=start_date - datetime.timedelta(hours=1),
                                         end_date=start_date, entries_limit=entries_limit, iteration=iteration-1)
         return toReturn[0]
@@ -135,7 +135,7 @@ class JsonEndPointArchiver(EndPoint):
         entries = 0
         for i in json_data:
             entries += i['val']
-        return entries
+        return int(entries)
 
     def getPVStatus(self, PV, type=PVMetaInfo.STATUS) -> dict:
         """
