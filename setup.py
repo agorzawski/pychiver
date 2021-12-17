@@ -15,7 +15,7 @@ setuptools.setup(
      long_description_content_type="text/markdown",
      install_requires=[
           'requests',
-          'dateutil',
+          'python-dateutil',
           'pandas',
           'matplotlib',
           'numpy',
