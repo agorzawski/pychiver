@@ -51,7 +51,7 @@ def validateTimeStamps(start_date, end_date=None) -> tuple:
 
 def getDateTimeObj(date_obj) -> datetime.datetime:
     if isinstance(date_obj, str):
-        date_obj = dateutil.parser(date_obj)
+        date_obj = dateutil.parser.parse(date_obj)
     elif not isinstance(date_obj, datetime.datetime):
         raise ValueError(f"date string of wrong type {type(date_obj)}")
     return date_obj

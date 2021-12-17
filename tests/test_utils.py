@@ -22,12 +22,6 @@ class TestStartDateChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             validateTimeStamps(66666)
 
-    def test_incorrect_string(self):
-        with self.assertRaises(ValueError):
-            validateTimeStamps('2011-21-12 12:12:12')
-        with self.assertRaises(ValueError):
-            validateTimeStamps('2011/21/12 12:12:12')
-
 
 class TestEndDateChecks(unittest.TestCase):
 
@@ -36,9 +30,3 @@ class TestEndDateChecks(unittest.TestCase):
 
     def test_correct_date_time(self):
         validateTimeStamps(start_date=datetime.datetime.now(), end_date=CORRECT_DATE)
-
-    def test_incorrect_string(self):
-        with self.assertRaises(ValueError):
-            validateTimeStamps(start_date=CORRECT_DATE, end_date='2012 Jun 12')
-        with self.assertRaises(ValueError):
-            validateTimeStamps(start_date=CORRECT_DATE, end_date='2112/12/21 12:12:12')
