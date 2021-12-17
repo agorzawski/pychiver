@@ -40,6 +40,8 @@ class EndPoint:
 def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
     """
     Fixes the data set. by creating
+
+
     :param dataset:
     :param start_date:
     :param end_date:
@@ -96,13 +98,14 @@ class JsonEndPointArchiver(EndPoint):
 
     def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None,
                         entries_warning_limit=5000, iteration=24) -> dict:
-        config.printVerbose(f"No data found for '{PV}', trying earlier between: start:{start_date} until {end_date}")
         if iteration == 0:
             warnings.warn('No data found in the increased time window, returning empty result.')
             return {'data': []}
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
+        if not entries:
+            config.printVerbose(f"No data found for '{PV}', trying earlier between: start:{start_date} until {end_date}")
         # TODO see if the recursive call should be here
         if entries_limit is None:
             entries_limit = max(entries, 1)
@@ -128,37 +131,53 @@ class JsonEndPointArchiver(EndPoint):
         :return:
         """
         count_url = f'{self.archiver_url_data}?pv=count({PV})&from={start_date}&to={end_date}'
-        json_data = requests.get(count_url).json()[0]['data']
+        res = requests.get(count_url)
+        if res.status_code != 200:
+            raise ValueError(f"Failed to count entries for {PV}, status {res.status_code}")
+        json_data = res.json()[0]['data']
         entries = 0
         for i in json_data:
             entries += i['val']
         return int(entries)
 
-    def getPVStatus(self, PV, type=PVMetaInfo.STATUS) -> dict:
+    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS) -> dict:
         """
-        :param type:
+        :param info_type:
         :param PV:
         :return:
         """
-        if not isinstance(type, PVMetaInfo):
+        if not isinstance(info_type, PVMetaInfo):
             raise ValueError('Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo')
         if isinstance(PV, str):
             PV = (PV,)
-        if type == PVMetaInfo.STATUS:
-            url_to_check = f"{self.archiver_url_mgmt}/getPVStatus?pv={','.join(PV)}"
-            returnData = requests.get(url_to_check).json()
-            return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
-        if type == PVMetaInfo.INFO:
-            # this end point does not support list
-            url_to_check = '{}/getPVTypeInfo?pv='.format(self.archiver_url_mgmt)
+        url_to_check = f"{self.archiver_url_mgmt}/getPVStatus?pv={','.join(PV)}"
+        status = requests.get(url_to_check).json()
+        status = {statusItem['pvName']: statusItem for statusItem in status}
+        if info_type == PVMetaInfo.STATUS:
+            returnData = status
+        else:
             returnData = {}
             for onePV in PV:
-                r = requests.get(url_to_check+onePV)
-                if r.status_code == 200:
-                    returnData[onePV] = r.json()
+                if "Not" in status[onePV]["status"]:
+                    returnData[onePV] = status[onePV]
                 else:
-                    returnData[onePV] = {'pvName': onePV, "status": 'Not being archived'}
-            return returnData
+                    if info_type == PVMetaInfo.INFO:
+                        # this end point does not support list
+                        query = "getPVTypeInfo"
+                    elif info_type == PVMetaInfo.DETAILS:
+                        query = "getPVDetails"
+                    else:
+                        raise ValueError(f"Wrong PV status type {info_type}")
+                    r = requests.get(f'{self.archiver_url_mgmt}/{query}?pv={onePV}')
+                    if r.status_code == 200:
+                        data = r.json()
+                        if isinstance(data, list): # Details is given as list..
+                            returnData[onePV] = {item['name']: item["value"] for item in data}
+                        else:
+                            returnData[onePV] = data
+                    else:  # TODO should probably no get here anymore?
+                        returnData[onePV] = {'pvName': onePV, "status": 'Not being archived'}
+        return returnData
 
     def getEmptyResult(self):
         return pandas.DataFrame(columns=('time', 'val', 'status_label', 'severity_label', 'secs_nanos', 'secs',

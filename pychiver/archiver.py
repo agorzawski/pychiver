@@ -206,14 +206,14 @@ class Archiver:
         # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
-    def check(self, PV: str, type=PVMetaInfo.STATUS) -> dict:
+    def check(self, PV: str, info_type=PVMetaInfo.STATUS) -> dict:
         """
         Provides information on the requested PV(s)
-        :param type: STATUS (default) returns info on PVs, INFO returns info on a given PVs
+        :param info_type: STATUS (default) returns info on PVs, INFO returns info on a given PVs
         :param PV: PVs to check status or info
         :return: dict of PV to its data
         """
-        return self.archiver.getPVStatus(PV, type=type)
+        return self.archiver.getPVStatus(PV, info_type=info_type)
 
     def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None,
              waveform_alert=True, force_non_archived=False) \
@@ -240,3 +240,4 @@ class Archiver:
             pass  # This error is thrown on scalar types, due to len(df['val'])
 
         return df, isWaveform
+
