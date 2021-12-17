@@ -1,4 +1,8 @@
 
+## 0.7.1
+- some code cleanup (verbosity and timestamps handling)
+- `archiver.check()` updated
+
 ## 0.7.0
 - extended SaveAndRestore capabilities
     - get snapshots/configurations names/ids
