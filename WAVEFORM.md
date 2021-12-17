@@ -1,11 +1,11 @@
 # pychiver for WAVEFORM support
 
 There are few implementations available for waveform collectors:
-* `PVWaveformCollector` Real time EPICS (camonitor) collector, to be set up with one PV, a raw waveform is collected 
+* `PVWaveformCollector` Real time EPICS (camonitor) collector, to be set up with one PV, a raw waveform is collected
   and kept in the data buffer
-* `ManyPVSWaveformCollector`, when there is a need for many PVs(scalar!) to be followed, this collector allows to listen to the waveform PV, collect its average value in ROI, and keep it in the data buffer. 
-  Exposed dataframe contains a timeseries waveform that is build from individual PV's values. 
-* `ArchiverWaveformCollector`, similar to the `PVWaveformCollector` but for the Archived data collector.  
+* `ManyPVSWaveformCollector`, when there is a need for many PVs(scalar!) to be followed, this collector allows to listen to the waveform PV, collect its average value in ROI, and keep it in the data buffer.
+  Exposed dataframe contains a timeseries waveform that is build from individual PV's values.
+* `ArchiverWaveformCollector`, similar to the `PVWaveformCollector` but for the Archived data collector.
 
 Both provide convenience methods for treating waveforms, their running scalar representations, Region of Interest (ROI) configuration etc.
 
@@ -43,8 +43,8 @@ end_time = "2021-06-25 14:30:00"
 PV = "RFQ-010:RFS-Kly-110:PwrFwd-Wave-PM"
 
 from pychiver.waveform import ArchiverWaveformCollector
-aCollector = ArchiverWaveformCollector(PV=PV, 
-                                       start_date=start_time, 
+aCollector = ArchiverWaveformCollector(PV=PV,
+                                       start_date=start_time,
                                        end_date=end_time,
                                        archiver_url='http://archiver-01.tn.esss.lu.se')
 

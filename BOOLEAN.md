@@ -2,7 +2,7 @@
 
 More examples in `examples/Boolean signals.ipynb`
 
-### init 
+### init
 To set up the client, one needs the following call:
 ```python
 from pychiver.archiver import Archiver
@@ -25,7 +25,7 @@ pvs = ("RFQ-010:RFS-VacMon-110:Status-Ilck-RB",  # vac 1
 ### compare for close occurrences
 
 ```python
-comparison_result = archiver.compare(pvs, start, end, 
+comparison_result = archiver.compare(pvs, start, end,
                                      tolerance_in_seconds=0.15,
                                      compare_edge=Edge.FALLING)
 ```

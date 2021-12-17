@@ -22,19 +22,20 @@ class EndPoint:
     """
     Abstract end point implementation for the Archiver
     """
+
     def __init__(self, archiver_url=None):
         self.archiver_url = archiver_url
         if self.archiver_url is None:
-            raise ValueError('Cannot instantiate Archiver without a proper link to the service.')
+            raise ValueError("Cannot instantiate Archiver without a proper link to the service.")
 
     def getDataForPV(self, PV: str, start_date, end_date=None, entries_limit=None) -> pandas.DataFrame:
-        raise NotImplementedError('Abstract implementation called, use concrete ones.')
+        raise NotImplementedError("Abstract implementation called, use concrete ones.")
 
     def getPVStatus(self, PV):
-        raise NotImplementedError('Abstract implementation called, use concrete ones.')
+        raise NotImplementedError("Abstract implementation called, use concrete ones.")
 
     def getEmptyResult(self):
-        raise NotImplementedError('Abstract implementation called, use concrete ones.')
+        raise NotImplementedError("Abstract implementation called, use concrete ones.")
 
 
 def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
@@ -49,24 +50,21 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
     """
     if len(dataset) < 2:
         from .calculations import LinearInterpolationStrategy
-        warnings.warn('No value found in the the initial Time range, search extended to the earlier 24h.')
+
+        warnings.warn("No value found in the the initial Time range, search extended to the earlier 24h.")
         new_times = [getDateTimeObj(start_date).timestamp(), getDateTimeObj(end_date).timestamp()]
         lis = LinearInterpolationStrategy(new_times)
-        new_values = lis.getValues(dataset['secs'].values, dataset['val'].values)
-        status = dataset['status'].values[-1]
-        severity = dataset['severity'].values[-1]
+        new_values = lis.getValues(dataset["secs"].values, dataset["val"].values)
+        status = dataset["status"].values[-1]
+        severity = dataset["severity"].values[-1]
         dataset.drop(dataset.index, inplace=True)
         for i in range(len(new_times)):
-            dataset = dataset.append({'val': new_values[i],
-                                            'secs': new_times[i],
-                                            'status': status,
-                                            'nanos': 0,
-                                            'severity': severity}, ignore_index=True)
+            dataset = dataset.append({"val": new_values[i], "secs": new_times[i], "status": status, "nanos": 0, "severity": severity}, ignore_index=True)
 
-    dataset['status_label'] = dataset.apply(lambda row: EpicsStatus(row['status']), axis=1)
-    dataset['severity_label'] = dataset.apply(lambda row: EpicsSeverity(row['severity']), axis=1)
-    dataset['secs_nanos'] = dataset['secs'] + dataset['nanos'] / 1e9
-    dataset['time'] = pandas.to_datetime(dataset['secs_nanos'], unit='s')
+    dataset["status_label"] = dataset.apply(lambda row: EpicsStatus(row["status"]), axis=1)
+    dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
+    dataset["secs_nanos"] = dataset["secs"] + dataset["nanos"] / 1e9
+    dataset["time"] = pandas.to_datetime(dataset["secs_nanos"], unit="s")
     return dataset
 
 
@@ -77,30 +75,27 @@ class JsonEndPointArchiver(EndPoint):
 
     def __init__(self, archiver_url=None):
         super().__init__(archiver_url)
-        self.archiver_url_data = '{}:17668/retrieval/data/getData.json'.format(archiver_url)
-        self.archiver_url_mgmt = '{}:17665/mgmt/bpl'.format(archiver_url)
+        self.archiver_url_data = "{}:17668/retrieval/data/getData.json".format(archiver_url)
+        self.archiver_url_mgmt = "{}:17665/mgmt/bpl".format(archiver_url)
 
-    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None,
-                     max_number_of_hours_back=24) -> pandas.DataFrame:
+    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24) -> pandas.DataFrame:
         try:
-            jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit,
-                                              iteration=max_number_of_hours_back)
+            jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit, iteration=max_number_of_hours_back)
             # TODO think about putting the iterative search for an earlier value up to the Archiver class
-            json_data = jsonReturn['data']
+            json_data = jsonReturn["data"]
             dataset = pandas.read_json(json.dumps(json_data))
             if dataset.empty:
-                warnings.warn('Empty dataset extracted for \'\''.format(PV))
+                warnings.warn(f"Empty dataset extracted for '{PV}'")
                 return dataset
             return _fix(dataset, start_date, end_date)
         except JSONDecodeError:
-            warnings.warn('No data returned in the requested date range, returning empty dataset!')
+            warnings.warn("No data returned in the requested date range, returning empty dataset!")
             return self.getEmptyResult()
 
-    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None,
-                        entries_warning_limit=5000, iteration=24) -> dict:
+    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None, entries_warning_limit=5000, iteration=24) -> dict:
         if iteration == 0:
-            warnings.warn('No data found in the increased time window, returning empty result.')
-            return {'data': []}
+            warnings.warn("No data found in the increased time window, returning empty result.")
+            return {"data": []}
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
@@ -110,15 +105,20 @@ class JsonEndPointArchiver(EndPoint):
         if entries_limit is None:
             entries_limit = max(entries, 1)
         if entries > entries_warning_limit:
-            warnings.warn(f'You are about to extract {entries} samples, this operation may take significant amount of time...')
+            warnings.warn(f"You are about to extract {entries} samples, this operation may take significant amount of time...")
         # try:
-        nth_url = f'{self.archiver_url_data}?pv=nth_{int(entries // entries_limit)}({PV})&from={start_date_str}&to={end_date_str}'
+        nth_url = f"{self.archiver_url_data}?pv=nth_{int(entries // entries_limit)}({PV})&from={start_date_str}&to={end_date_str}"
         # except ZeroDivisionError:
         #     return
         toReturn = requests.get(nth_url).json()
-        if not len(toReturn) or not len(toReturn[0].get('data', [])):
-            return self._getJSONRequest(PV, start_date=start_date - datetime.timedelta(hours=1),
-                                        end_date=start_date, entries_limit=entries_limit, iteration=iteration-1)
+        if not len(toReturn) or not len(toReturn[0].get("data", [])):
+            return self._getJSONRequest(
+                PV,
+                start_date=start_date - datetime.timedelta(hours=1),
+                end_date=start_date,
+                entries_limit=entries_limit,
+                iteration=iteration - 1,
+            )
         return toReturn[0]
 
     def _countEntries(self, PV, start_date, end_date) -> int:
@@ -130,14 +130,14 @@ class JsonEndPointArchiver(EndPoint):
         :param end_date:
         :return:
         """
-        count_url = f'{self.archiver_url_data}?pv=count({PV})&from={start_date}&to={end_date}'
+        count_url = f"{self.archiver_url_data}?pv=count({PV})&from={start_date}&to={end_date}"
         res = requests.get(count_url)
         if res.status_code != 200:
             raise ValueError(f"Failed to count entries for {PV}, status {res.status_code}")
-        json_data = res.json()[0]['data']
+        json_data = res.json()[0]["data"]
         entries = 0
         for i in json_data:
-            entries += i['val']
+            entries += i["val"]
         return int(entries)
 
     def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS) -> dict:
@@ -147,12 +147,12 @@ class JsonEndPointArchiver(EndPoint):
         :return:
         """
         if not isinstance(info_type, PVMetaInfo):
-            raise ValueError('Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo')
+            raise ValueError("Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo")
         if isinstance(PV, str):
             PV = (PV,)
         url_to_check = f"{self.archiver_url_mgmt}/getPVStatus?pv={','.join(PV)}"
         status = requests.get(url_to_check).json()
-        status = {statusItem['pvName']: statusItem for statusItem in status}
+        status = {statusItem["pvName"]: statusItem for statusItem in status}
         if info_type == PVMetaInfo.STATUS:
             returnData = status
         else:
@@ -168,17 +168,16 @@ class JsonEndPointArchiver(EndPoint):
                         query = "getPVDetails"
                     else:
                         raise ValueError(f"Wrong PV status type {info_type}")
-                    r = requests.get(f'{self.archiver_url_mgmt}/{query}?pv={onePV}')
+                    r = requests.get(f"{self.archiver_url_mgmt}/{query}?pv={onePV}")
                     if r.status_code == 200:
                         data = r.json()
-                        if isinstance(data, list): # Details is given as list..
-                            returnData[onePV] = {item['name']: item["value"] for item in data}
+                        if isinstance(data, list):  # Details is given as list..
+                            returnData[onePV] = {item["name"]: item["value"] for item in data}
                         else:
                             returnData[onePV] = data
                     else:  # TODO should probably no get here anymore?
-                        returnData[onePV] = {'pvName': onePV, "status": 'Not being archived'}
+                        returnData[onePV] = {"pvName": onePV, "status": "Not being archived"}
         return returnData
 
     def getEmptyResult(self):
-        return pandas.DataFrame(columns=('time', 'val', 'status_label', 'severity_label', 'secs_nanos', 'secs',
-                                         'nanos', 'status', 'severity'))
+        return pandas.DataFrame(columns=("time", "val", "status_label", "severity_label", "secs_nanos", "secs", "nanos", "status", "severity"))

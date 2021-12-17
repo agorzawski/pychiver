@@ -7,7 +7,6 @@ CORRECT_DATE = "2011-12-21 12:12:12"
 
 
 class TestStartDateChecks(unittest.TestCase):
-
     def test_none_start_date(self):
         with self.assertRaises(ValueError):
             validateTimeStamps(start_date=None)
@@ -22,9 +21,12 @@ class TestStartDateChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             validateTimeStamps(66666)
 
+    def test_incorrect_string(self):
+        with self.assertRaises(ValueError):
+            validateTimeStamps("2011-21-12 12:12:12")
+
 
 class TestEndDateChecks(unittest.TestCase):
-
     def test_correct_string(self):
         validateTimeStamps(CORRECT_DATE, end_date=CORRECT_DATE)
 

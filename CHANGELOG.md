@@ -24,7 +24,7 @@
 ## 0.6.1
 - Added/expanded jupyter examples
 - Waveform Collector ROI update/retrieval updated
-- some cleanup on the leftovers (printouts, doc, etc) 
+- some cleanup on the leftovers (printouts, doc, etc)
 
 ## 0.6.0
 - Fixed waveform support (longer connections timeouts, configurable number of data points)
@@ -52,7 +52,7 @@
 
 ## 0.4.0
 - added first support for the save and restore
-  - configuration/snapshots lists 
+  - configuration/snapshots lists
   - snapshot details
   - snapshot restore (WIP)
 
