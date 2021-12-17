@@ -5,3 +5,4 @@ from enum import Enum, unique
 class PVMetaInfo(Enum):
     INFO = 0
     STATUS = 1
+    DETAILS = 2

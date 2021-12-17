@@ -9,6 +9,8 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
+from . import config
+
 
 class InterpolationStrategy:
 
@@ -60,7 +62,7 @@ class LastAcquiredValueInterpolationStrategy(InterpolationStrategy):
 def alignDataFrames(dict_of_datasets,
                     time_base=None,
                     InterpolationStrategyImpl=None,
-                    time_column='time', value_columns=("val",), verbose=False) -> pd.DataFrame:
+                    time_column='time', value_columns=("val",)) -> pd.DataFrame:
     """
     For a given dict of DataFrames (dict of 'Data Label' -> DataFrame), the data alignment is performed for the
     provided data sets values (according to provided value columns) and the provided new time base
@@ -72,7 +74,6 @@ def alignDataFrames(dict_of_datasets,
     :param InterpolationStrategyImpl:
     :param time_column: default 'time'
     :param value_columns: default 'val'
-    :param verbose: default False, prints out the progress on the computation
     :return: pandas DataFrame with one time column and value columns for each data label
     """
     if InterpolationStrategyImpl is None:
@@ -112,25 +113,21 @@ def alignDataFrames(dict_of_datasets,
     if time_base is None:
         isImpl = InterpolationStrategyImpl(dict_of_datasets[firstPV][time_column].to_numpy())
         newDF_values.append(dict_of_datasets[firstPV][time_column].to_numpy())
-        if verbose:
-            print('First PV used as a time base: ', firstPV)
+        config.printVerbose('First PV used as a time base: ', firstPV)
     else:
         isImpl = InterpolationStrategyImpl(time_base)
         newDF_values.append(time_base)
-        if verbose:
-            print('External time base used.')
+        config.printVerbose('External time base used.')
 
     for one_PV in dict_of_datasets.keys():
         if one_PV in dfToSkip:
             continue
         for one_val_column in value_columns:
-            if verbose:
-                print("Interpolating for {}:{}".format(one_PV, one_val_column))
+            config.printVerbose(f"Interpolating for {one_PV}:{one_val_column}")
             x = isImpl.getValues(dict_of_datasets[one_PV][time_column].to_numpy(),
                                  dict_of_datasets[one_PV][one_val_column].to_numpy())
             newDF_values.append(x)
-    if verbose:
-        print('Alignment completed!')
+    config.printVerbose('Alignment completed!')
 
     returnDF = pd.DataFrame(np.transpose(np.array(newDF_values)), columns=newDF_columns)
     returnDF['time'] = pd.to_datetime(returnDF[time_column], unit='s')
@@ -138,7 +135,7 @@ def alignDataFrames(dict_of_datasets,
 
 
 def calculateMovingAverage(dataset, window=10,
-                           time_column='secs_nanos', value_columns=('val',), verbose=False):
+                           time_column='secs_nanos', value_columns=('val',)):
     """
     Modifies the the provided data set, by adding extra columns for mean time and mean values.
 
@@ -146,7 +143,6 @@ def calculateMovingAverage(dataset, window=10,
     :param value_columns:
     :param time_column:
     :param window: default 10s
-    :param verbose:
     :return: None
     """
     df = pd.DataFrame()
@@ -156,7 +152,7 @@ def calculateMovingAverage(dataset, window=10,
     df[time_column] = dataset[time_column]
     df['mean_time'] = pd.to_datetime((dataset[time_column]).rolling(window=window).mean(), unit='s')
     for one_value_column in value_columns:
-        if verbose: print("Column \'{}\' applied with {}s moving average".format(one_value_column, window))
+        config.printVerbose(f"Column '{one_value_column}' applied with {window}s moving average")
         df['mean_' + one_value_column] = dataset[one_value_column].rolling(window=window).mean()
     df.dropna(inplace=True)
     return df
@@ -213,27 +209,24 @@ def findCloseTimestamps(dfs,
                         edge_to_use=Edge.RISING,
                         tolerance_in_seconds=1,
                         timeColumn='secs_nanos',
-                        valueColumn='val',
-                        verbose=False):
+                        valueColumn='val'):
     newTs = []
     for pv in dfs.keys():
         oneDf = dfs[pv]
         if not oneDf[valueColumn].between(0, 1, inclusive="both").any():
             raise ValueError('It seems that your boolean data for {} has values outside of 0 and 1... cannot')
         toConsider = oneDf.loc[oneDf[valueColumn] != edge_to_use.value]
-        if verbose:
-            print('---------{}-----------'.format(pv))
-            print(oneDf[timeColumn].values)
-            print(toConsider)
+        config.printVerbose('---------{}-----------'.format(pv))
+        config.printVerbose(oneDf[timeColumn].values)
+        config.printVerbose(toConsider)
         newTs.extend(toConsider[timeColumn].values)
 
     allTimeStamps = np.array(newTs)
     closeOnes = allTimeStamps[:-1] - allTimeStamps[1:]
     closeOnes.sort()
     indexes = np.where(np.abs(closeOnes) < tolerance_in_seconds)
-    if verbose:
-        print(indexes)
-        print(allTimeStamps[indexes])
+    config.printVerbose(indexes)
+    config.printVerbose(allTimeStamps[indexes])
     return allTimeStamps[indexes]
 
 

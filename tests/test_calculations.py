@@ -112,14 +112,12 @@ class TestDataAlign(unittest.TestCase):
 
     def test_align_with_first_df_time(self):
         result = alignDataFrames({"PV1": DF_1, "PV2": DF_2},
-                                 # verbose=True,
                                  InterpolationStrategyImpl=LinearInterpolationStrategy)
         self._compare_two_arrays(DF_2_VAL_FOR_DF_1_TIME, result['PV2:val'].to_numpy())
 
     def test_align_with_external_time_base(self):
         result = alignDataFrames({"PV1": DF_1, "PV2": DF_2}, time_base=EXTERNAL_TIME_BASE,
                                  value_columns=("val", 'some_other'),
-                                 # verbose=True,
                                  InterpolationStrategyImpl=LinearInterpolationStrategy)
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE, result['PV1:val'].to_numpy())
         self._compare_two_arrays(DF_2_VAL_FOR_EXTERNAL_TIME_BASE, result['PV2:val'].to_numpy())
@@ -127,7 +125,6 @@ class TestDataAlign(unittest.TestCase):
     def test_align_one_df_with_external_time_base(self):
         result = alignDataFrames({"PV1": DF_1}, time_base=EXTERNAL_TIME_BASE,
                                  value_columns=("val", 'some_other'),
-                                 # verbose=True,
                                  InterpolationStrategyImpl=LinearInterpolationStrategy)
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE, result['PV1:val'].to_numpy())
 

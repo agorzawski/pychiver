@@ -2,3 +2,5 @@
 .idea/*
 *.env
 *checkpoints*
+*.egg-info
+build
