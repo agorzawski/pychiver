@@ -17,6 +17,12 @@ unittest:
     - coverage run -m unittest -v
     - coverage report
 
+style_check:
+  stage: check
+  image: registry.esss.lu.se/ics-docker/pre-commit
+  script:
+    - pre-commit run --all-files
+
 sonar-scanner:
   stage: analyse
   image: sonarsource/sonar-scanner-cli:latest
