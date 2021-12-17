@@ -243,7 +243,7 @@ class SaveAndRestore:
         # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
         raise NotImplementedError('Not implemented yet!')
 
-    def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, verbose=False,
+    def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None,
                         timeout=1) -> bool:
         """
         Provides the true/false result of the comparison for a given snapshot.
@@ -251,24 +251,22 @@ class SaveAndRestore:
         False, when one (or more) saved values does not match the read values
 
         :param timeout:
-        :param verbose:
         :param date_time:
         :param snapshot: existing snapshot,
         :date_time: default None
         :return: True/False
         """
-        comparisonResult = self.compare(snapshot=snapshot, date_time=date_time, verbose=verbose, timeout=timeout)
+        comparisonResult = self.compare(snapshot=snapshot, date_time=date_time, timeout=timeout)
         comparisonResult = comparisonResult[~comparisonResult['delta'].between(0, 0)]
         return len(comparisonResult) == 0
 
-    def compare(self, snapshot: SARSnapshot = None, date_time=None, verbose=False, timeout=1) -> pandas.DataFrame:
+    def compare(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> pandas.DataFrame:
         """
         Provides the way of comparing a snapshot to the:
          - live values, that are retrieved by pyepics.
          - archived values in the archiver at given date_time
 
         :param timeout:
-        :param verbose:
         :param date_time:
         :param snapshot: existing snapshot,
         :date_time: default None
@@ -292,7 +290,7 @@ class SaveAndRestore:
             print(date_time_to_consider)
             startD = date_time_to_consider - timedelta(seconds=1)  # TODO archiver window to consider?
             endD = date_time_to_consider + timedelta(seconds=1)
-            data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD, verbose=verbose)
+            data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD)
             print("=======")
             print(data)
             print("=======")

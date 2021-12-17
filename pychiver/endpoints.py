@@ -11,6 +11,7 @@ from json import JSONDecodeError
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
 from .domain import PVMetaInfo
+from . import config
 
 import pandas
 import json
@@ -78,10 +79,10 @@ class JsonEndPointArchiver(EndPoint):
         self.archiver_url_mgmt = '{}:17665/mgmt/bpl'.format(archiver_url)
 
     def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None,
-                     max_number_of_hours_back=24, verbose=False) -> pandas.DataFrame:
+                     max_number_of_hours_back=24) -> pandas.DataFrame:
         try:
             jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit,
-                                              iteration=max_number_of_hours_back, verbose=verbose)
+                                              iteration=max_number_of_hours_back)
             # TODO think about putting the iterative search for an earlier value up to the Archiver class
             json_data = jsonReturn['data']
             dataset = pandas.read_json(json.dumps(json_data))
@@ -94,9 +95,8 @@ class JsonEndPointArchiver(EndPoint):
             return self.getEmptyResult()
 
     def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None,
-                        entries_warning_limit=5000, iteration=24, verbose=False) -> dict:
-        if verbose:
-            print('No data found for \'{}\', trying earlier between: start:{} until {}'.format(PV, start_date, end_date))
+                        entries_warning_limit=5000, iteration=24) -> dict:
+        config.printVerbose(f"No data found for '{PV}', trying earlier between: start:{start_date} until {end_date}")
         if iteration == 0:
             warnings.warn('No data found in the increased time window, returning empty result.')
             return {'data': []}
