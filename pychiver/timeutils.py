@@ -3,8 +3,8 @@ AD/Operations
 Arek Gorzawski 2021, ESS
 """
 import datetime
+import dateutil.parser
 
-VALID_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
@@ -46,18 +46,18 @@ def validateTimeStamps(start_date, end_date=None) -> tuple:
     :raises ValueError if wrong type of objects provided
     """
     s, e = validateTimeStampsReturnObjects(start_date, end_date)
-    return getTimeStampFormatted(s), getTimeStampFormatted(e)
+    return _getTimeStampFormatted(s), _getTimeStampFormatted(e)
 
 
-def getDateTimeObj(date_obj, date_input_format=VALID_DATE_FORMAT) -> datetime.datetime:
-    if isinstance(date_obj, datetime.datetime):
-        pass
-    else:
-        date_obj = datetime.datetime.strptime(date_obj, date_input_format)
+def getDateTimeObj(date_obj) -> datetime.datetime:
+    if isinstance(date_obj, str):
+        date_obj = dateutil.parser(date_obj)
+    elif not isinstance(date_obj, datetime.datetime):
+        raise ValueError(f"date string of wrong type {type(date_obj)}")
     return date_obj
 
 
-def getTimeStampFormatted(date_obj, date_input_format=VALID_DATE_FORMAT) -> str:
+def _getTimeStampFormatted(date_obj) -> str:
     """
     Formats the provided object or string (according to the input format) into the Archiver date format,
     in datetime().isoformat()+Z
@@ -66,5 +66,5 @@ def getTimeStampFormatted(date_obj, date_input_format=VALID_DATE_FORMAT) -> str:
     :param date_input_format: default "%Y-%m-%d %H:%M:%S"
     :return: ESS Archiver formatted date string
     """
-    date_obj = getDateTimeObj(date_obj, date_input_format)
+    date_obj = getDateTimeObj(date_obj)
     return date_obj.isoformat() + "Z"

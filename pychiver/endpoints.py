@@ -105,7 +105,7 @@ class JsonEndPointArchiver(EndPoint):
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
         if not entries:
-            config.printVerbose(f"No data found for '{PV}', trying earlier between: start:{start_date} until {end_date}")
+            config.printVerbose(f"No data found for '{PV}', trying earlier than: start:{start_date} until {end_date}")
         # TODO see if the recursive call should be here
         if entries_limit is None:
             entries_limit = max(entries, 1)
