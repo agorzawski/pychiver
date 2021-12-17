@@ -107,12 +107,9 @@ class JsonEndPointArchiver(EndPoint):
         if entries_limit is None:
             entries_limit = max(entries, 1)
         if entries > entries_warning_limit:
-            warnings.warn(
-                'You are about to extract {} samples, this operation may take significant amount of time...'.format(
-                    entries))
+            warnings.warn(f'You are about to extract {entries} samples, this operation may take significant amount of time...')
         # try:
-        nth_url = '{}?pv=nth_{}({})&from={}&to={}'.format(self.archiver_url_data, int(entries // entries_limit),
-                                                          PV, start_date_str, end_date_str)
+        nth_url = f'{self.archiver_url_data}?pv=nth_{int(entries // entries_limit)}({PV})&from={start_date_str}&to={end_date_str}'
         # except ZeroDivisionError:
         #     return
         toReturn = requests.get(nth_url).json()
@@ -130,7 +127,7 @@ class JsonEndPointArchiver(EndPoint):
         :param end_date:
         :return:
         """
-        count_url = '{}?pv=count({})&from={}&to={}'.format(self.archiver_url_data, PV, start_date, end_date)
+        count_url = f'{self.archiver_url_data}?pv=count({PV})&from={start_date}&to={end_date}'
         json_data = requests.get(count_url).json()[0]['data']
         entries = 0
         for i in json_data:
@@ -148,9 +145,7 @@ class JsonEndPointArchiver(EndPoint):
         if isinstance(PV, str):
             PV = (PV,)
         if type == PVMetaInfo.STATUS:
-            url_to_check = '{}/getPVStatus?pv='.format(self.archiver_url_mgmt)
-            for onePV in PV:
-                url_to_check += onePV + ","
+            url_to_check = f"{self.archiver_url_mgmt}/getPVStatus?pv={','.join(PV)}"
             returnData = requests.get(url_to_check).json()
             return {returnDataItem['pvName']: returnDataItem for returnDataItem in returnData}
         if type == PVMetaInfo.INFO:
