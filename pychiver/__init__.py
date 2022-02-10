@@ -5,4 +5,4 @@ from . import waveform
 from .config import setVerbose
 
 __title__ = "pychiver"
-__all__ = [archiver, timeutils, calculations, waveform, setVerbose]
+__all__ = ["archiver", "timeutils", "calculations", "waveform", "setVerbose"]
