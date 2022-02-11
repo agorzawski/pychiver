@@ -12,15 +12,17 @@ unittest:
     - python --version
     # - pip install -r requirements.txt
     - pip install .
-    - pip install coverage
-    - python -m unittest -v
+    - pip install coverage pytest
+    - pytest --junitxml=report.xml
     - coverage run -m unittest -v
     - coverage xml
     - coverage report
   coverage: '/^TOTAL\s+\d+\s+\d+\s+(\d+)/'
   artifacts:
+    when: always
     reports:
       cobertura: coverage.xml
+      junit: report.xml
 
 style_check:
   stage: check
