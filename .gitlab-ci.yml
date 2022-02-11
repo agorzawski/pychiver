@@ -28,3 +28,5 @@ sonar-scanner:
   image: sonarsource/sonar-scanner-cli:latest
   script:
     - sonar-scanner -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=pychiver -Dsonar.projectVersion=$CI_COMMIT_REF_NAME -Dsonar.sources=pychiver,tests -Dsonar.host.url=https://sonarqube.esss.lu.se
+  only:
+    - branches@accop/pytools/pychiver
