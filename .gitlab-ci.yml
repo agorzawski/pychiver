@@ -15,7 +15,12 @@ unittest:
     - pip install coverage
     - python -m unittest -v
     - coverage run -m unittest -v
+    - coverage xml
     - coverage report
+  coverage: '/^TOTAL\s+\d+\s+\d+\s+(\d+)/'
+  artifacts:
+    reports:
+      cobertura: coverage.xml
 
 style_check:
   stage: check
