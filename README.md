@@ -35,23 +35,23 @@ data = archiver.get(pvs, start_date=start, end_date=end)
 ```python
 data[pvs[0]].head()
          secs       val      nanos  severity  status          status_label  \
-0  1626437406  0.999994  754566219         0       0  EpicsStatus.NO_ALARM   
-1  1626437522  1.999987  787428386         0       0  EpicsStatus.NO_ALARM   
-2  1626437528  0.999994  805362607         0       0  EpicsStatus.NO_ALARM   
-3  1626437652  1.999987  996693166         0       0  EpicsStatus.NO_ALARM   
-4  1626437673  3.999975   16029357         0       0  EpicsStatus.NO_ALARM   
+0  1626437406  0.999994  754566219         0       0  EpicsStatus.NO_ALARM
+1  1626437522  1.999987  787428386         0       0  EpicsStatus.NO_ALARM
+2  1626437528  0.999994  805362607         0       0  EpicsStatus.NO_ALARM
+3  1626437652  1.999987  996693166         0       0  EpicsStatus.NO_ALARM
+4  1626437673  3.999975   16029357         0       0  EpicsStatus.NO_ALARM
 
-           severity_label    secs_nanos                          time  
-0  EpicsSeverity.NO_ALARM  1.626437e+09 2021-07-16 12:10:06.754566144  
-1  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:12:02.787428352  
-2  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:12:08.805362688  
-3  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:14:12.996693248  
-4  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:14:33.016029440  
+           severity_label    secs_nanos                          time
+0  EpicsSeverity.NO_ALARM  1.626437e+09 2021-07-16 12:10:06.754566144
+1  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:12:02.787428352
+2  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:12:08.805362688
+3  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:14:12.996693248
+4  EpicsSeverity.NO_ALARM  1.626438e+09 2021-07-16 12:14:33.016029440
 ```
 
 *EPICS* Severity and Status (`pychiver.codes`) exist both the raw, and the translated version.
 
-> **NOTE** if no value is found in the requested window (i.e. value did not change, 
+> **NOTE** if no value is found in the requested window (i.e. value did not change,
 > therefore its last state maybe saved some time before the requested window) an automatic attempt
 > for the last 24h (configurable) will be performed.
 
@@ -61,9 +61,9 @@ To get many PVs at the same time and additionally perform their 'time' alignment
 data = archiver.getAligned(pvs, start_date=start, end_date=end)
 #returns one combined pandas DataFrame with all PVS aligned to the desired time_base
 ```
-There is a parameter defining the interpolation strategy used when aligning (see `pychicer.calculations`). 
-The following image depicts the two available implementations: 
-- `LinearInterpolationStrategy` (*default*, shown in orange) 
+There is a parameter defining the interpolation strategy used when aligning (see `pychicer.calculations`).
+The following image depicts the two available implementations:
+- `LinearInterpolationStrategy` (*default*, shown in orange)
 - `LastAcquiredValueInterpolationStrategy` (shown in green)
 
 ![](doc/pychiver-interpolations.png)
@@ -110,9 +110,5 @@ pip install pychiver
 
 ## Extra environmental configuration
 Setup of the environmental variable is possible, the following can be set for the desired instance
- - `EPICS_ARCHIVER_URL` 
+ - `EPICS_ARCHIVER_URL`
  - `SAVE_AND_RESTORE_URL`
-
-
-
-

@@ -12,13 +12,28 @@ unittest:
     - python --version
     # - pip install -r requirements.txt
     - pip install .
-    - pip install coverage
-    - python -m unittest -v
+    - pip install coverage pytest
+    - pytest --junitxml=report.xml
     - coverage run -m unittest -v
+    - coverage xml
     - coverage report
+  coverage: '/^TOTAL\s+\d+\s+\d+\s+(\d+)/'
+  artifacts:
+    when: always
+    reports:
+      cobertura: coverage.xml
+      junit: report.xml
+
+style_check:
+  stage: check
+  image: registry.esss.lu.se/ics-docker/pre-commit
+  script:
+    - pre-commit run --all-files
 
 sonar-scanner:
   stage: analyse
   image: sonarsource/sonar-scanner-cli:latest
   script:
     - sonar-scanner -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=pychiver -Dsonar.projectVersion=$CI_COMMIT_REF_NAME -Dsonar.sources=pychiver,tests -Dsonar.host.url=https://sonarqube.esss.lu.se
+  only:
+    - branches@accop/pytools/pychiver

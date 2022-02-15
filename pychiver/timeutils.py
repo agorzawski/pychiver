@@ -6,7 +6,6 @@ import datetime
 import dateutil.parser
 
 
-
 def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
     """
     Ensures that provided time stamps are of correct format.
@@ -20,16 +19,16 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
     """
 
     if start_date is None:
-        raise ValueError('Cannot validate NONE start_date')
+        raise ValueError("Cannot validate NONE start_date")
 
     if end_date is None:
         end_date = datetime.datetime.now()
 
     if not isinstance(start_date, (datetime.datetime, str)):
-        raise ValueError('Wrong start_date format (neither date time nor string)!')
+        raise ValueError("Wrong start_date format (neither date time nor string)!")
 
     if not isinstance(end_date, (datetime.datetime, str)):
-        raise ValueError('Wrong end_date format (neither date time nor string)!')
+        raise ValueError("Wrong end_date format (neither date time nor string)!")
 
     return getDateTimeObj(start_date), getDateTimeObj(end_date)
 

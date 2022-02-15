@@ -32,15 +32,13 @@ import warnings
 import numpy
 import pandas
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, \
-    Edge
+from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge
 from .domain import PVMetaInfo
 from .endpoints import JsonEndPointArchiver
-from .  import config
+from . import config
 
 
 class Archiver:
-
     def __init__(self, archiver_url=None, DefaultEndPoint=JsonEndPointArchiver):
         """
         Initializes the archiver with a provided url. If no url provided,
@@ -51,10 +49,12 @@ class Archiver:
         """
         self.archiver_url = archiver_url
         if self.archiver_url is None:
-            self.archiver_url = os.getenv('EPICS_ARCHIVER_URL', None)
+            self.archiver_url = os.getenv("EPICS_ARCHIVER_URL", None)
             if self.archiver_url is None:
-                warnings.warn("Archiver URL was not provided nor set in the env. \
-                                Set EPICS_ARCHIVER_URL in your env.")
+                warnings.warn(
+                    "Archiver URL was not provided nor set in the env. \
+                                Set EPICS_ARCHIVER_URL in your env."
+                )
 
         self.archiver = DefaultEndPoint(archiver_url=archiver_url)
 
@@ -77,23 +77,20 @@ class Archiver:
                 useSeparateLimits = True
             dataToReturn = {}
             for index, onePV in enumerate(PV):
-                config.printVerbose('Collecting data for', onePV)
+                config.printVerbose("Collecting data for", onePV)
                 e_limit = entries_limit
                 if useSeparateLimits:
                     e_limit = entries_limit[index]
-                dataToReturn[onePV] = self._get(onePV, start_date=start_date, end_date=end_date,
-                                                entries_limit=e_limit,
-                                                force_non_archived=force_non_archived)[0]
+                dataToReturn[onePV] = self._get(onePV, start_date=start_date, end_date=end_date, entries_limit=e_limit, force_non_archived=force_non_archived)[
+                    0
+                ]
             return dataToReturn
         else:
             if isinstance(entries_limit, tuple) and len(entries_limit) > 0:
                 entries_limit = entries_limit[0]
-            return {PV: self._get(PV, start_date=start_date, end_date=end_date,
-                                  entries_limit=entries_limit,
-                                  force_non_archived=force_non_archived)[0]}
+            return {PV: self._get(PV, start_date=start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived)[0]}
 
-    def getWaveform(self, onePV: str, start_date, end_date=None,
-                    force_non_archived=False) -> pandas.DataFrame:
+    def getWaveform(self, onePV: str, start_date, end_date=None, force_non_archived=False) -> pandas.DataFrame:
         """
         Returns an pandas DataFrame that contains a waveform
 
@@ -104,14 +101,21 @@ class Archiver:
         :return:
         """
         if not isinstance(onePV, str):
-            raise ValueError('Only one waveform at the time! Too many or none PVs provided.')
-        return self._get(onePV, start_date=start_date, end_date=end_date,
-                         waveform_alert=False, force_non_archived=force_non_archived)[0]
+            raise ValueError("Only one waveform at the time! Too many or none PVs provided.")
+        return self._get(onePV, start_date=start_date, end_date=end_date, waveform_alert=False, force_non_archived=force_non_archived)[0]
 
-    def getAligned(self, PVS: list, start_date, end_date=None,
-                   time_base=None, strategy=LinearInterpolationStrategy,
-                   entries_limit=None, time_column="secs_nanos", value_columns=("val",),
-                   force_non_archived=False) -> pandas.DataFrame:
+    def getAligned(
+        self,
+        PVS: list,
+        start_date,
+        end_date=None,
+        time_base=None,
+        strategy=LinearInterpolationStrategy,
+        entries_limit=None,
+        time_column="secs_nanos",
+        value_columns=("val",),
+        force_non_archived=False,
+    ) -> pandas.DataFrame:
         """
         Extracts PVs and aligns them to the timestamps of the first PV in the list or separately provided time base.
         Uses the provided InterpolationStrategy (default one LinearInterpolationStrategy)
@@ -130,19 +134,28 @@ class Archiver:
 
         :return: a DataFrame with all PVS and their values
         """
-        dict_of_dataframes = self.get(PVS, start_date, end_date=end_date,
-                                      entries_limit=entries_limit,
-                                      force_non_archived=force_non_archived)
+        dict_of_dataframes = self.get(PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived)
         if not isinstance(dict_of_dataframes, dict):
-            raise ValueError('Wrong data format provided. Dict of pandas.DataFrames expected, {} provided'. \
-                             format(dict_of_dataframes.__class__))
-        return alignDataFrames(dict_of_dataframes, time_base=time_base,
-                               time_column=time_column, value_columns=value_columns,
-                               InterpolationStrategyImpl=strategy)
+            raise ValueError("Wrong data format provided. Dict of pandas.DataFrames expected, {} provided".format(dict_of_dataframes.__class__))
+        return alignDataFrames(
+            dict_of_dataframes,
+            time_base=time_base,
+            time_column=time_column,
+            value_columns=value_columns,
+            InterpolationStrategyImpl=strategy,
+        )
 
-    def getMovingAverage(self, PV, start_date, end_date=None, entries_limit=None, window=10,
-                         time_column="secs_nanos", value_columns=("val",),
-                         force_non_archived=False) -> pandas.DataFrame:
+    def getMovingAverage(
+        self,
+        PV,
+        start_date,
+        end_date=None,
+        entries_limit=None,
+        window=10,
+        time_column="secs_nanos",
+        value_columns=("val",),
+        force_non_archived=False,
+    ) -> pandas.DataFrame:
         """
         Retrieves the data for a given PV and calculates the moving average for a selected window.
         The resulting dataframe is cleared from all NaN cases.
@@ -158,21 +171,26 @@ class Archiver:
         :return:
         """
         if isinstance(PV, list) or isinstance(PV, tuple) or isinstance(PV, dict):
-            raise ValueError('Cannot handle more than one PV at the time. \
-                                Use getAligned together with calculations.calculateMovingAverage')
-        df, isWaveform = self._get(PV, start_date, end_date=end_date, entries_limit=entries_limit,
-                                   force_non_archived=force_non_archived)
+            raise ValueError(
+                "Cannot handle more than one PV at the time. \
+                                Use getAligned together with calculations.calculateMovingAverage"
+            )
+        df, isWaveform = self._get(PV, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived)
         if isWaveform:
-            warnings.warn('Moving average over the waveform is not implemented! Returning simple DataForm')
+            warnings.warn("Moving average over the waveform is not implemented! Returning simple DataForm")
             return df
-        return calculateMovingAverage(df[PV], window=window,
-                                      time_column=time_column, value_columns=value_columns)
+        return calculateMovingAverage(df[PV], window=window, time_column=time_column, value_columns=value_columns)
 
-    def compare(self, PVs: list, start_date, end_date=None,
-                # index_of_reference_PV=0,
-                compare_edge=Edge.FALLING,
-                tolerance_in_seconds=0.1,
-                force_non_archived=False) -> numpy.array:
+    def compare(
+        self,
+        PVs: list,
+        start_date,
+        end_date=None,
+        # index_of_reference_PV=0,
+        compare_edge=Edge.FALLING,
+        tolerance_in_seconds=0.1,
+        force_non_archived=False,
+    ) -> numpy.array:
         """
         Returns timestamps of the close occurrences of the RISING or FALLING for two
 
@@ -185,15 +203,17 @@ class Archiver:
         :return:
         """
         if len(PVs) != 2:
-            raise ValueError('Only two signals expected for comparison!')
+            raise ValueError("Only two signals expected for comparison!")
 
         # TODO see what to pass more, limits? etc..
-        dfs = self.get(PVs, start_date=start_date, end_date=end_date,
-                       force_non_archived=force_non_archived,)
+        dfs = self.get(
+            PVs,
+            start_date=start_date,
+            end_date=end_date,
+            force_non_archived=force_non_archived,
+        )
 
-        closeTimeStamps = findCloseTimestamps(dfs,
-                                              tolerance_in_seconds=tolerance_in_seconds,
-                                              edge_to_use=compare_edge)
+        closeTimeStamps = findCloseTimestamps(dfs, tolerance_in_seconds=tolerance_in_seconds, edge_to_use=compare_edge)
         return closeTimeStamps
 
     def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
@@ -215,29 +235,23 @@ class Archiver:
         """
         return self.archiver.getPVStatus(PV, info_type=info_type)
 
-    def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None,
-             waveform_alert=True, force_non_archived=False) \
-            -> pandas.DataFrame:
+    def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None, waveform_alert=True, force_non_archived=False) -> pandas.DataFrame:
         isWaveform = False
         status = self.check(onePV)
         df = self.archiver.getEmptyResult()
         if force_non_archived:
-            warnings.warn('Skipping the check if {} is being archived in {}'.format(onePV, self.archiver_url))
-        if 'Not' in status[onePV]['status'] and not force_non_archived:
-            warnings.warn('Requested PV \'{}\' is NOT archived in {}, empty dataset will be returned.'
-                          .format(onePV, self.archiver_url))
+            warnings.warn("Skipping the check if {} is being archived in {}".format(onePV, self.archiver_url))
+        if "Not" in status[onePV]["status"] and not force_non_archived:
+            warnings.warn("Requested PV '{}' is NOT archived in {}, empty dataset will be returned.".format(onePV, self.archiver_url))
             pass
         else:
-            df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date,
-                                            entries_limit=entries_limit)
+            df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit)
         try:
-            if len(df) > 0 and len(df['val'][0]):
+            if len(df) > 0 and len(df["val"][0]):
                 isWaveform = True
                 if waveform_alert:
-                    warnings.warn("The PV \'{}\' you have extracted is type of WAVEFORM with {} samples".
-                                  format(onePV, len(df['val'][0])))
+                    warnings.warn("The PV '{}' you have extracted is type of WAVEFORM with {} samples".format(onePV, len(df["val"][0])))
         except TypeError:
             pass  # This error is thrown on scalar types, due to len(df['val'])
 
         return df, isWaveform
-

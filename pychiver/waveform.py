@@ -18,12 +18,7 @@ class WaveformCollector(ABC):
     An abstract class for waveform collectors
     """
 
-    def __init__(self, PV,
-                 roi_indexes: tuple = None,
-                 roi_use_on_final=True,
-                 callback=None,
-                 callback_delay_in_seconds=1,
-                 **kwargs):
+    def __init__(self, PV, roi_indexes: tuple = None, roi_use_on_final=True, callback=None, callback_delay_in_seconds=1, **kwargs):
         """
         Constructor for the abstract WaveformCollector class.
 
@@ -40,12 +35,12 @@ class WaveformCollector(ABC):
         self._roi_indexes = roi_indexes
         self._roi_use_on_final = roi_use_on_final
         if callback is None:
-            warnings.warn('You have not defined the callback function! dev>null will be used.')
+            warnings.warn("You have not defined the callback function! dev>null will be used.")
             callback = self._null_callback
         self._callback = callback
         self._callback_delay = timedelta(seconds=callback_delay_in_seconds)
         self._callback_last_call = datetime.now()
-        self._dataframe = pandas.DataFrame(columns={'time', 'secs', 'secs_nanos', 'val'})
+        self._dataframe = pandas.DataFrame(columns={"time", "secs", "secs_nanos", "val"})
         # TODO make conf with columns names across archiver and waveforms dataframes
 
     def getLastWaveform(self, timestamp=None, last=1) -> pandas.DataFrame:
@@ -62,7 +57,7 @@ class WaveformCollector(ABC):
             return toReturn
         else:
             # TODO use last available value as interpolation strategy
-            raise NotImplementedError('Only last acquisition available for now, use: timestamp=None.')
+            raise NotImplementedError("Only last acquisition available for now, use: timestamp=None.")
 
     def getAllWaveforms(self) -> pandas.DataFrame:
         """
@@ -76,7 +71,7 @@ class WaveformCollector(ABC):
         """
         :return: a simplified dataframe only with the time and average value in the roi region
         """
-        return self.getAllWaveforms()[['time', 'val_roi']]
+        return self.getAllWaveforms()[["time", "val_roi"]]
 
     def getColumns(self):
         """
@@ -97,9 +92,9 @@ class WaveformCollector(ABC):
         :return: None
         """
         if not isinstance(roi_indexes, tuple) and len(roi_indexes) != 2:
-            raise ValueError('Wrong ROI settings provided!')
+            raise ValueError("Wrong ROI settings provided!")
         if sample_length is not None and sample_length > 0:
-            self._roi_indexes = (int(roi_indexes[0]/sample_length), int(roi_indexes[1]/sample_length))
+            self._roi_indexes = (int(roi_indexes[0] / sample_length), int(roi_indexes[1] / sample_length))
         else:
             self._roi_indexes = roi_indexes
 
@@ -113,11 +108,10 @@ class WaveformCollector(ABC):
     def _recalculate_ROI_value(self, df):
         if self._dataframe.empty:
             return
-        if self._roi_use_on_final and self._roi_indexes is not None \
-                and len(self._roi_indexes) == 2 and self._roi_indexes[0] < self._roi_indexes[1]:
-            df['val_roi'] = df.apply(lambda row: np.mean(row['val'][self._roi_indexes[0]:self._roi_indexes[1]]), axis=1)
+        if self._roi_use_on_final and self._roi_indexes is not None and len(self._roi_indexes) == 2 and self._roi_indexes[0] < self._roi_indexes[1]:
+            df["val_roi"] = df.apply(lambda row: np.mean(row["val"][self._roi_indexes[0] : self._roi_indexes[1]]), axis=1)
         else:
-            df['val_roi'] = df.apply(lambda row: math.nan)
+            df["val_roi"] = df.apply(lambda row: math.nan)
 
     def _null_callback(self, **kwargs):
         pass  # an empty callback
@@ -141,15 +135,12 @@ class CommonRealTimeWaveformCollector(WaveformCollector):
         self._dataframe = self._dataframe[0:0]
 
     def _append(self, time, val, secs, secs_nanos):
-        self._dataframe = self._dataframe.append({'time': time,
-                                                  'val': val,
-                                                  'secs': secs,
-                                                  'secs_nanos': secs_nanos}, ignore_index=True)
+        self._dataframe = self._dataframe.append({"time": time, "val": val, "secs": secs, "secs_nanos": secs_nanos}, ignore_index=True)
 
     def _update_buffer_and_call_callback(self, now):
         # drop older than collector's buffer
         oldest_to_keep = now - timedelta(seconds=self._data_buffer)
-        self._dataframe.drop(self._dataframe[self._dataframe['time'] < oldest_to_keep].index, inplace=True)
+        self._dataframe.drop(self._dataframe[self._dataframe["time"] < oldest_to_keep].index, inplace=True)
         # check if call the external callback
         checkTime = datetime.now()
         if checkTime > self._callback_last_call + self._callback_delay:
@@ -160,7 +151,6 @@ class CommonRealTimeWaveformCollector(WaveformCollector):
 
 
 class PVWaveformCollector(CommonRealTimeWaveformCollector):
-
     def __init__(self, PV: str, **kwargs):
         """
         Implementation of the WaveformCollector.
@@ -174,12 +164,13 @@ class PVWaveformCollector(CommonRealTimeWaveformCollector):
         :param data_buffer: default 180s,
         """
         if not isinstance(PV, str):
-            raise ValueError('Use one WaveformCollector per one PV')
+            raise ValueError("Use one WaveformCollector per one PV")
         super().__init__(PV, **kwargs)
-        self._epicsPV = epics.PV(self._PV,
-                                 connection_timeout=kwargs.get('connection_timeout', 1),
-                                 count=kwargs.get('count', None),
-                                 )
+        self._epicsPV = epics.PV(
+            self._PV,
+            connection_timeout=kwargs.get("connection_timeout", 1),
+            count=kwargs.get("count", None),
+        )
         self._epicsPV.add_callback(self._execute_callback)
 
     def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
@@ -190,7 +181,6 @@ class PVWaveformCollector(CommonRealTimeWaveformCollector):
 
 
 class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
-
     def __init__(self, PVS: list, **kwargs):
         """
         Implementation of the WaveformCollector.
@@ -209,17 +199,17 @@ class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
         timestamp = datetime.now()
         self._append(timestamp, [0 for pv in PVS], None, timestamp.timestamp())
         for PV in PVS:
-            print('Registered \'{}\' for camonitoring'.format(PV))
+            print("Registered '{}' for camonitoring".format(PV))
             epics.camonitor(PV, callback=self._execute_callback)
 
     def _execute_callback(self, pvname=None, value=None, char_value=None, **kwargs):
         if isinstance(value, list):
-            warnings.warn('Subscribed PV {} is a waveform... skipping.'.format(pvname))
+            warnings.warn("Subscribed PV {} is a waveform... skipping.".format(pvname))
             return None
         PVIndex = self._PV.index(pvname)
         timestamp = datetime.fromtimestamp(kwargs["timestamp"])
         try:
-            newValueToBeSaved = [i for i in self._dataframe.iloc[[-1]]['val'].values[0]]  # TODO this one is fishy...
+            newValueToBeSaved = [i for i in self._dataframe.iloc[[-1]]["val"].values[0]]  # TODO this one is fishy...
             newValueToBeSaved[PVIndex] = value
             self._append(timestamp, newValueToBeSaved, None, kwargs["timestamp"])
             self._update_buffer_and_call_callback(timestamp)
@@ -228,7 +218,6 @@ class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
 
 
 class ArchiverWaveformCollector(WaveformCollector):
-
     def __init__(self, PV, start_date, end_date=None, archiver_url=None, force_non_archived=False, **kwargs):
         """
         Implementation of the WaveformCollector.
@@ -240,14 +229,12 @@ class ArchiverWaveformCollector(WaveformCollector):
         :param end_date: if None, it will used now()
         """
         if not isinstance(PV, str):
-            raise ValueError('Use one WaveformCollector per one PV')
+            raise ValueError("Use one WaveformCollector per one PV")
         super().__init__(PV, **kwargs)
         self._archiver = Archiver(archiver_url=archiver_url)
-        self._dataframe = self._fetch_values(PV, start_date=start_date, end_date=end_date,
-                                             force_non_archived=force_non_archived)
+        self._dataframe = self._fetch_values(PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived)
 
         # TODO initialize the auto refresh to call self._callback()
 
     def _fetch_values(self, PV, start_date, end_date=None, force_non_archived=False):
-        return self._archiver.getWaveform(PV, start_date=start_date, end_date=end_date,
-                                          force_non_archived=force_non_archived)
+        return self._archiver.getWaveform(PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived)

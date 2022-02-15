@@ -1,6 +1,6 @@
 # Examples *Save and Restore*
 > **NOTE**: Check `examples`, where interactive notebooks are.
-> 
+>
 > **This is a prototype for the python service connection for save and restore service.**
 
 ## Service
@@ -63,7 +63,7 @@ status = sar.compareAndCheck(snapshot=some_snapshot)
 >**NOTE** the service needs to be started with the additional, not empty parameter `archiver_url`
 ```python
 from pychiver.saveandrestore import SaveAndRestore
-sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se", 
+sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se",
                      archiver_url="'http://archiver-01.tn.esss.lu.se'")
 status = sar.compare(snapshot=some_snapshot, date_time="2021-07-01 21:21:21")
 #returns pandas.DataFrame with setPoint values and current values and with deltas
@@ -71,7 +71,7 @@ status = sar.compare(snapshot=some_snapshot, date_time="2021-07-01 21:21:21")
 
 #### To restore:
 
-> **NOTE** the restore (pvput) action is executed where the client package is running. **You may not have a privilege** (due to the network configuration) to successfully execute your call. 
+> **NOTE** the restore (pvput) action is executed where the client package is running. **You may not have a privilege** (due to the network configuration) to successfully execute your call.
 ```python
 status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
@@ -99,6 +99,6 @@ sar.save(snapshot=some_snapshot, nodeType=NodeType.VIRTUAL_SNAPSHOT)
 The main objects are:
 - `SARConfig`
 - `SARConfigPV`
-- `SARSnapshot` - snapshot that contains the storred configurations  
+- `SARSnapshot` - snapshot that contains the storred configurations
 - `SARVirtualSnapshot` - virtual snapshot that holds provided snapshots' references and provides the
   combined actions (e.g. compare, restore) on all of them at once
