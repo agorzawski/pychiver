@@ -170,6 +170,7 @@ class PVWaveformCollector(CommonRealTimeWaveformCollector):
             self._PV,
             connection_timeout=kwargs.get("connection_timeout", 1),
             count=kwargs.get("count", None),
+            auto_monitor=True,
         )
         self._epicsPV.add_callback(self._execute_callback)
 
