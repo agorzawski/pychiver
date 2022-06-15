@@ -274,10 +274,10 @@ class SaveAndRestore:
         if date_time is None:
             # TODO add some comperror support
             values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)  # TODO check order PVs
-            df["live_values"] = values
-            df["archived_values"] = math.nan
+            df["live_value"] = values
+            df["archived_value"] = math.nan
             try:
-                df["delta"] = df["stored_value"] - df["live_values"]
+                df["delta"] = df["stored_value"] - df["live_value"]
             except:
                 warnings.warn("Some error occurred during the delta calculation, skipping")
 
@@ -292,10 +292,14 @@ class SaveAndRestore:
             print("=======")
             print(data)
             print("=======")
-            df["live_values"] = math.nan
-            df["archived_values"] = math.nan
-            # TODO finish this comparison with a proper data extracted
-            raise NotImplementedError("Not implemented until the end!")
+            df["live_value"] = math.nan
+            values = []
+            for one in snapshot.getPVs():
+                val = math.nan
+                if len(data[one].index) > 1:
+                    val = data[one]['val'][0]  # FIXME better access to the value stored
+                values.append(val)
+            df["archived_value"] = values
         return df
 
     def restore(self, snapshot: SARSnapshot = None, **kwargs):

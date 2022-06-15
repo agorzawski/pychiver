@@ -65,9 +65,40 @@ status = sar.compareAndCheck(snapshot=some_snapshot)
 from pychiver.saveandrestore import SaveAndRestore
 sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se",
                      archiver_url="'http://archiver-01.tn.esss.lu.se'")
-status = sar.compare(snapshot=some_snapshot, date_time="2021-07-01 21:21:21")
-#returns pandas.DataFrame with setPoint values and current values and with deltas
+
+status = sar.compare(snapshot=some_snapshot, date_time="2022-06-13 19:21:21")
 ```
+
+Example of the returned dataframe:
+```commandline
+syslog:> Snapshot: MEBT magnets setting, all current up to 60 mA with right MEBT chopper voltage/0c6184dc-07bc-4124-9519-7667c028ee7c  GOLDEN
+syslog:> check state on: 2022-06-13 19:21:21
+
+                           pv_name  stored_value  archived_value
+0     MEBT-010:PwrC-PSCH-001:Cur-S         -3.75          -0.600
+1     MEBT-010:PwrC-PSCH-002:Cur-S          6.50           5.000
+2     MEBT-010:PwrC-PSCH-003:Cur-S         -1.50          -0.350
+3     MEBT-010:PwrC-PSCH-004:Cur-S          0.00          -0.300
+4     MEBT-010:PwrC-PSCH-005:Cur-S          0.00           0.030
+5     MEBT-010:PwrC-PSCH-006:Cur-S          0.00           0.080
+6     MEBT-010:PwrC-PSCH-007:Cur-S          0.00           0.200
+7     MEBT-010:PwrC-PSCV-001:Cur-S         -6.75          -6.000
+8     MEBT-010:PwrC-PSCV-002:Cur-S          9.25           7.000
+9     MEBT-010:PwrC-PSCV-003:Cur-S         -2.00          -1.380
+10    MEBT-010:PwrC-PSCV-004:Cur-S          0.00          -0.370
+11    MEBT-010:PwrC-PSCV-005:Cur-S          0.00          -1.000
+12    MEBT-010:PwrC-PSCV-006:Cur-S          0.00          -1.078
+13    MEBT-010:PwrC-PSCV-007:Cur-S          0.00           1.630
+14    MEBT-010:PwrC-PSQH-002:Cur-S        120.27         117.408
+15    MEBT-010:PwrC-PSQH-004:Cur-S          0.00          29.206
+16    MEBT-010:PwrC-PSQH-005:Cur-S          0.00          40.333
+17    MEBT-010:PwrC-PSQH-007:Cur-S          0.00          56.432
+18    MEBT-010:PwrC-PSQV-001:Cur-S        101.08          97.141
+19    MEBT-010:PwrC-PSQV-003:Cur-S         80.00          74.454
+20    MEBT-010:PwrC-PSQV-006:Cur-S          0.00          88.039
+21  MEBT-010:BMD-Chop-001:Field-SP       4500.00             NaN
+```
+
 
 #### To restore:
 
