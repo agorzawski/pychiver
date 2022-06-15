@@ -1,3 +1,7 @@
+## 0.7.2
+- save restore time machine implemented (first version)
+- archiver has now additional argument to force earlier searches for the last value `.get(max_number_of_hours_back=24)`
+- various bug fixes
 
 ## 0.7.1
 - some code cleanup (verbosity and timestamps handling)
