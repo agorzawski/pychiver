@@ -106,10 +106,13 @@ class JsonEndPointArchiver(EndPoint):
             entries_limit = max(entries, 1)
         if entries > entries_warning_limit:
             warnings.warn(f"You are about to extract {entries} samples, this operation may take significant amount of time...")
-        # try:
-        nth_url = f"{self.archiver_url_data}?pv=nth_{int(entries // entries_limit)}({PV})&from={start_date_str}&to={end_date_str}"
-        # except ZeroDivisionError:
-        #     return
+        nth = int(entries // entries_limit)
+        if nth == 0:
+            warnings.warn(
+                f"In the selected time range, the number of entries={entries} is under the specified limit={entries_limit}")
+            nth = 1
+        nth_url = f"{self.archiver_url_data}?pv=nth_{nth}({PV})&from={start_date_str}&to={end_date_str}"
+
         toReturn = requests.get(nth_url).json()
         if not len(toReturn) or not len(toReturn[0].get("data", [])):
             return self._getJSONRequest(
