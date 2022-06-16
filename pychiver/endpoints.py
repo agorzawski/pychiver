@@ -108,8 +108,7 @@ class JsonEndPointArchiver(EndPoint):
             warnings.warn(f"You are about to extract {entries} samples, this operation may take significant amount of time...")
         nth = int(entries // entries_limit)
         if nth == 0:
-            warnings.warn(
-                f"In the selected time range, the number of entries={entries} is under the specified limit={entries_limit}")
+            warnings.warn(f"In the selected time range, the number of entries={entries} is under the specified limit={entries_limit}")
             nth = 1
         nth_url = f"{self.archiver_url_data}?pv=nth_{nth}({PV})&from={start_date_str}&to={end_date_str}"
 

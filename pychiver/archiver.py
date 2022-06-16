@@ -58,8 +58,7 @@ class Archiver:
 
         self.archiver = DefaultEndPoint(archiver_url=archiver_url)
 
-    def get(self, PV, start_date, end_date=None, entries_limit=None, force_non_archived=False,
-            max_number_of_hours_back=24):
+    def get(self, PV, start_date, end_date=None, entries_limit=None, force_non_archived=False, max_number_of_hours_back=24):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
 
@@ -84,16 +83,28 @@ class Archiver:
                 e_limit = entries_limit
                 if useSeparateLimits:
                     e_limit = entries_limit[index]
-                dataToReturn[onePV] = self._get(onePV, start_date=start_date, end_date=end_date, entries_limit=e_limit,
-                                                force_non_archived=force_non_archived,
-                                                max_number_of_hours_back=max_number_of_hours_back)[0]
+                dataToReturn[onePV] = self._get(
+                    onePV,
+                    start_date=start_date,
+                    end_date=end_date,
+                    entries_limit=e_limit,
+                    force_non_archived=force_non_archived,
+                    max_number_of_hours_back=max_number_of_hours_back,
+                )[0]
             return dataToReturn
         else:
             if isinstance(entries_limit, tuple) and len(entries_limit) > 0:
                 entries_limit = entries_limit[0]
-            return {PV: self._get(PV, start_date=start_date, end_date=end_date, entries_limit=entries_limit,
-                                  force_non_archived=force_non_archived,
-                                  max_number_of_hours_back=max_number_of_hours_back)[0]}
+            return {
+                PV: self._get(
+                    PV,
+                    start_date=start_date,
+                    end_date=end_date,
+                    entries_limit=entries_limit,
+                    force_non_archived=force_non_archived,
+                    max_number_of_hours_back=max_number_of_hours_back,
+                )[0]
+            }
 
     def getWaveform(self, onePV: str, start_date, end_date=None, force_non_archived=False) -> pandas.DataFrame:
         """
@@ -240,8 +251,9 @@ class Archiver:
         """
         return self.archiver.getPVStatus(PV, info_type=info_type)
 
-    def _get(self, onePV: str, start_date, end_date=None, entries_limit: int = None, waveform_alert=True,
-             force_non_archived=False, max_number_of_hours_back=24) -> pandas.DataFrame:
+    def _get(
+        self, onePV: str, start_date, end_date=None, entries_limit: int = None, waveform_alert=True, force_non_archived=False, max_number_of_hours_back=24
+    ) -> pandas.DataFrame:
         isWaveform = False
         status = self.check(onePV)
         df = self.archiver.getEmptyResult()
@@ -251,9 +263,9 @@ class Archiver:
             warnings.warn("Requested PV '{}' is NOT archived in {}, empty dataset will be returned.".format(onePV, self.archiver_url))
             pass
         else:
-            df = self.archiver.getDataForPV(onePV, start_date=start_date, end_date=end_date,
-                                            entries_limit=entries_limit,
-                                            max_number_of_hours_back=max_number_of_hours_back)
+            df = self.archiver.getDataForPV(
+                onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit, max_number_of_hours_back=max_number_of_hours_back
+            )
         try:
             if len(df) > 0 and len(df["val"][0]):
                 isWaveform = True

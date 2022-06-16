@@ -297,7 +297,7 @@ class SaveAndRestore:
             for one in snapshot.getPVs():
                 val = math.nan
                 if len(data[one].index) > 1:
-                    val = data[one]['val'][0]  # FIXME better access to the value stored
+                    val = data[one]["val"][0]  # FIXME better access to the value stored
                 values.append(val)
             df["archived_value"] = values
         return df
