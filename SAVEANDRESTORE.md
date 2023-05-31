@@ -8,8 +8,11 @@
 #### To set up the client, all one needs is the following call:
 ```python
 from pychiver.saveandrestore import SaveAndRestore
-sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se")
+sar = SaveAndRestore()
 ```
+
+> Note: if no dedicated `service_url` will be provided a  `pychiver.instances.DEFAULT_SAVE_RESTORE` will be used.
+
 
 #### To get information of all nodes of given type:
 
