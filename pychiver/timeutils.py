@@ -7,6 +7,7 @@ import dateutil.parser
 
 DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+
 def getPeriods(date=datetime.now(), periods=1, period_length_in_hours=1) -> list:
     """
     Returns a list of tuples for start and end date of the defined period

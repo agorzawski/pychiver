@@ -83,8 +83,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             for one in currentLevel:
                 currentPath = path + one["name"] + "/"
                 if one["nodeType"] == nodeType.name:
-                    mainTree[SARFolder(fullPath=currentPath, uniqueId=one["uniqueId"], name=one["name"])] = SARConfig(
-                        **one)
+                    mainTree[SARFolder(fullPath=currentPath, uniqueId=one["uniqueId"], name=one["name"])] = SARConfig(**one)
 
                 self.getAllNodes(one["uniqueId"], mainTree, path=currentPath, nodeType=nodeType)
         else:
@@ -127,8 +126,7 @@ class SaveAndRestore:
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
     """
 
-    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE,
-                 DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
+    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
 

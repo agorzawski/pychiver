@@ -36,7 +36,6 @@ class TestEndDateChecks(unittest.TestCase):
 
 
 class TestPeriods(unittest.TestCase):
-
     def test_simple_periods(self):
         r = getPeriods(date=getDateTimeObj(CORRECT_DATE), periods=2)
         self.assertEqual(2, len(r))
