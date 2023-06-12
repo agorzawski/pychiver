@@ -66,12 +66,26 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.service_url_root = "{}/root".format(self.service_url)
         self.url_config_snapshot = "{}/config/{{}}/snapshots".format(self.service_url)
         self.url_config_items = "{}/snapshot/{{}}/items".format(self.service_url)
+        self.url_node = "{}/node/{{}}".format(self.service_url)
         self.url_child = "{}/node/{{}}/children".format(self.service_url)
         self.url_parent = "{}/node/{{}}/parent".format(self.service_url)
+        self.url_snapshot = "{}/snapshot/{{}}".format(self.service_url)
 
     def status(self):
         print(self.__dict__)
 
+    def getSnapshot(self, uniqueId):        
+        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
+        #print(json_data_Node)        
+        #print("======")
+        json_data = requests.get(self.url_snapshot.format(uniqueId)).json()
+        #print(json_data)
+        json_data['uniqueId'] = json_data_Node['uniqueId']
+        json_data['name'] = json_data_Node['name']
+        json_data['description'] = json_data_Node['description']
+        return SARSnapshot(**json_data)
+
+    
     def getRoot(self):
         json_data = requests.get(self.service_url_root).json()
         return SARItem(**json_data)
@@ -173,11 +187,8 @@ class SaveAndRestore:
             raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
         if snapshotId is not None:
             try:
-                parentInfo = self.service.getParent(uniqueId=snapshotId)
-                allInParentConfig = self.service.getChildren(uniqueId=parentInfo["uniqueId"])
-                for one in allInParentConfig:
-                    if one["uniqueId"] == snapshotId:
-                        return SARSnapshot(**{**one, "snapshotConfigPVs": self.service.getItems(one["uniqueId"])})
+                return self.service.getSnapshot(snapshotId)                
+                
             except JSONDecodeError:
                 warnings.warn("Something went wrong with finding the provided snapshotId='{}'".format(snapshotId))
         if snapshotName is not None:
@@ -204,9 +215,7 @@ class SaveAndRestore:
         allInParentConfig = self.service.getChildren(uniqueId=configUniqueId)
         toReturn = {}
         for one in allInParentConfig:
-            bb = self.service.getItems(one["uniqueId"])
-            # TODO log the data to the console
-            toReturn[one["name"]] = SARSnapshot(**{**one, "snapshotConfigPVs": bb})
+            toReturn[one["name"]] = self.service.getSnapshot(one["uniqueId"])
         return toReturn
 
     def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:

@@ -88,11 +88,11 @@ class SARSnapshot(SARItem):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.configPVs = []
-        if kwargs.get("snapshotConfigPVs", None) is None:
+        if kwargs.get("snapshotItems", None) is None:
             raise ValueError("Cannot initialise SARSnapshot object without configPvs!")
         if kwargs.get("properties", None) is None:
             self.properties = {"golden": "false"}
-        for one in kwargs.get("snapshotConfigPVs"):
+        for one in kwargs.get("snapshotItems"):
             self.configPVs.append(SARConfigPV(**one))
 
     def __repr__(self):
