@@ -64,44 +64,61 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         if service_url is None:
             service_url = os.getenv("SAVE_AND_RESTORE_URL", None)
         super().__init__(service_url=service_url)
-        self.service_url_root = "{}/root".format(self.service_url)
-        self.url_config_snapshot = "{}/config/{{}}/snapshots".format(self.service_url)
-        self.url_config_items = "{}/snapshot/{{}}/items".format(self.service_url)
+        self.service_url_root = "{}/root".format(self.service_url) # deprecated
+        self.url_config_snapshot = "{}/config/{{}}/snapshots".format(self.service_url) # deprecated
+        self.url_config_items = "{}/snapshot/{{}}/items".format(self.service_url) # deprecated
+        
         self.url_node = "{}/node/{{}}".format(self.service_url)
         self.url_child = "{}/node/{{}}/children".format(self.service_url)
         self.url_parent = "{}/node/{{}}/parent".format(self.service_url)
         self.url_snapshot = "{}/snapshot/{{}}".format(self.service_url)
+        self.url_snapshots = "{}/snapshots".format(self.service_url)
+        self.url_composite ="{}/composite-snapshot/{{}}".format(self.service_url)
+        self.url_composite_nodes ="{}/composite-snapshot/{{}}/nodes".format(self.service_url)
 
     def status(self):
         print(self.__dict__)
 
     def getSnapshot(self, uniqueId):        
-        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
-        #print(json_data_Node)        
-        #print("======")
-        json_data = requests.get(self.url_snapshot.format(uniqueId)).json()
-        #print(json_data)
-        json_data['uniqueId'] = json_data_Node['uniqueId']
-        json_data['name'] = json_data_Node['name']
-        json_data['description'] = json_data_Node['description']
-        return SARSnapshot(**json_data)
+        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()        
+        if json_data_Node['nodeType'] == 'SNAPSHOT':        
+            json_data = requests.get(self.url_snapshot.format(uniqueId)).json()
+            json_data['uniqueId'] = json_data_Node['uniqueId']
+            json_data['name'] = json_data_Node['name']
+            json_data['description'] = json_data_Node['description']
+            return SARSnapshot(**json_data)
+        else:
+            return None
 
+    def getCompositeSnapshotStub(self, uniqueId):        
+        a = requests.get(self.url_composite.format(uniqueId)).json()
+        print(a)
+        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
+        json_data_Node['referencedSnapshotNodes'] = a['referencedSnapshotNodes']
+        return json_data_Node
     
     def getRoot(self):
         json_data = requests.get(self.service_url_root).json()
         return SARItem(**json_data)
 
-    def getAllNodes(self, uniqueId, mainTree, path="", nodeType=NodeType.CONFIGURATION):
-        currentLevel = self.getChildren(uniqueId=uniqueId)
-        if len(currentLevel):
-            for one in currentLevel:
-                currentPath = path + one["name"] + "/"
-                if one["nodeType"] == nodeType.name:
-                    mainTree[SARFolder(fullPath=currentPath, uniqueId=one["uniqueId"], name=one["name"])] = SARConfig(**one)
-
-                self.getAllNodes(one["uniqueId"], mainTree, path=currentPath, nodeType=nodeType)
-        else:
-            pass
+    def getAllNodes(self,  mainTree ,uniqueId=None, path="", nodeType=NodeType.CONFIGURATION):
+        # TODO FIX it
+        if nodeType==NodeType.SNAPSHOT:
+            toReturn = []
+            for one in requests.get(self.url_snapshots).json():
+                toReturn.append(self.getSnapshot(one['uniqueId']))
+            return toReturn
+        
+        #currentLevel = self.getChildren(uniqueId=uniqueId)
+        #if len(currentLevel):
+        #    for one in currentLevel:
+        #        currentPath = path + one["name"] + "/"
+        #        if one["nodeType"] == nodeType.name:
+        #            mainTree[SARFolder(fullPath=currentPath, uniqueId=one["uniqueId"], name=one["name"])] = SARConfig(**one)
+        #        self.getAllNodes(one["uniqueId"], mainTree, path=currentPath, nodeType=nodeType)
+        #else:
+        #    pass
+        raise NotImplementedError("Only Snapshots for now, Folders/Configs and Composite not yet!")
 
     def getChildren(self, uniqueId=None, forcedTypeTuple=None):
         if uniqueId is None:
@@ -219,6 +236,24 @@ class SaveAndRestore:
             toReturn[one["name"]] = self.service.getSnapshot(one["uniqueId"])
         return toReturn
 
+    
+    def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARVirtualSnapshot:
+        """
+        :return: a virtual snapshot
+        """
+        json = self.service.getCompositeSnapshotStub(snapshotId)
+        snapshots = []
+        for oneSnapshotId in json['referencedSnapshotNodes']:
+            a = self.service.getSnapshot(oneSnapshotId)
+            if isinstance(a, SARSnapshot):
+                snapshots.append(a)
+            else:
+                aInception = self.getCompositeSnapshot(oneSnapshotId)
+                for oneS in aInception.getSnapshots():
+                    snapshots.append(oneS)
+        return SARVirtualSnapshot(uniqueId=json['uniqueId'], name=json['name'], snapshots=snapshots)    
+    
+    
     def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:
         """
         From the provided snapshots it creates a virtual one, that combines the source.
@@ -230,6 +265,7 @@ class SaveAndRestore:
         # TODO add creation check process support
         # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
         return SARVirtualSnapshot(uniqueId=uuid.uuid4(), name=name, snapshots=snapshots)
+    
 
     def getAll(self, useCache=False, nodeType=NodeType.CONFIGURATION) -> dict:
         """
@@ -240,7 +276,7 @@ class SaveAndRestore:
         """
         configurations = {}
         if not useCache:
-            self.service.getAllNodes(self.service.getRoot().uniqueId, configurations, nodeType=nodeType)
+            self.service.getAllNodes(configurations, nodeType=nodeType)
             self._updateCache(configurations)
             return configurations
         else:
