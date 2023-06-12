@@ -38,6 +38,7 @@ import uuid
 import pickle
 import warnings
 from datetime import datetime, timedelta
+from .instances import DEFAULT_SAVE_RESTORE
 
 
 class SaveAndRestoreEndPoint:
@@ -139,7 +140,7 @@ class SaveAndRestore:
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
     """
 
-    def __init__(self, service_url: str, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
+    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
 
