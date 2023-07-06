@@ -58,7 +58,21 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
         status = dataset["status"].values[-1]
         severity = dataset["severity"].values[-1]
         dataset.drop(dataset.index, inplace=True)
-        dataset = pandas.concat([dataset, pandas.DataFrame({"val": new_values, "secs": new_times, "status": [status]*len(new_values), "nanos": [0]*len(new_values), "severity": [severity]*len(new_values)})], ignore_index=True)
+        dataset = pandas.concat(
+            [
+                dataset,
+                pandas.DataFrame(
+                    {
+                        "val": new_values,
+                        "secs": new_times,
+                        "status": [status] * len(new_values),
+                        "nanos": [0] * len(new_values),
+                        "severity": [severity] * len(new_values),
+                    }
+                ),
+            ],
+            ignore_index=True,
+        )
 
     dataset["status_label"] = dataset.apply(lambda row: EpicsStatus(row["status"]), axis=1)
     dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
@@ -112,11 +126,11 @@ class JsonEndPointArchiver(EndPoint):
         if not len(toReturn) or not len(toReturn[0].get("data", [])):
             if iteration > 0:
                 return self._getJSONRequest(
-                  PV,
-                  start_date=start_date - datetime.timedelta(hours=1),
-                  end_date=start_date,
-                  entries_limit=entries_limit,
-                  iteration=iteration - 1,
+                    PV,
+                    start_date=start_date - datetime.timedelta(hours=1),
+                    end_date=start_date,
+                    entries_limit=entries_limit,
+                    iteration=iteration - 1,
                 )
             else:
                 warnings.warn("No data found (in the increased time window), returning empty result.")
