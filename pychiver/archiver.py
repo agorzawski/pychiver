@@ -258,9 +258,9 @@ class Archiver:
         status = self.check(onePV)
         df = self.archiver.getEmptyResult()
         if force_non_archived:
-            warnings.warn("Skipping the check if {} is being archived in {}".format(onePV, self.archiver_url))
+            warnings.warn(f"Skipping the check if {onePV} is being archived in {self.archiver_url}")
         if "Not" in status[onePV]["status"] and not force_non_archived:
-            warnings.warn("Requested PV '{}' is NOT archived in {}, empty dataset will be returned.".format(onePV, self.archiver_url))
+            warnings.warn(f"Requested PV '{onePV}' is NOT archived in {self.archiver_url}, empty dataset will be returned.")
             pass
         else:
             df = self.archiver.getDataForPV(
@@ -270,7 +270,7 @@ class Archiver:
             if len(df) > 0 and len(df["val"][0]):
                 isWaveform = True
                 if waveform_alert:
-                    warnings.warn("The PV '{}' you have extracted is type of WAVEFORM with {} samples".format(onePV, len(df["val"][0])))
+                    warnings.warn(f"The PV '{onePV}' you have extracted is type of WAVEFORM with {len(df['val'][0])} samples")
         except TypeError:
             pass  # This error is thrown on scalar types, due to len(df['val'])
 
