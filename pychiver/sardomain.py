@@ -73,11 +73,11 @@ class SARConfig(SARItem):
 class SARConfigPV:
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
-        if kwargs.get("configPv", None) is None:
+        if kwargs.get("snapshotItems", None) is None:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or readbackPvName in the configPV")
 
     def __repr__(self):
-        return "{}/{}".format(self.configPv["pvName"], self.configPv["readbackPvName"])
+        return "{}/{}".format(self.snapshotItems["pvName"], self.snapshotItems.get("readbackPvName", "no readback PV"))
 
 
 class SARSnapshot(SARItem):
@@ -184,7 +184,7 @@ def _append_config(rowsList, one: SARConfigPV):
     secs_nanos = one.value.get("time").get("unixSec") + one.value.get("time").get("nanoSec") / 1e9
     rowsList.append(
         {
-            "pv_name": one.configPv.get("pvName"),
+            "pv_name": one.snapshotItems.get("pvName"),
             "timestamp": pd.to_datetime(secs_nanos, unit="s"),
             "secs_nanos": secs_nanos,
             "status_label": one.value.get("alarm").get("status"),  # TODO use EpicsStatus codes.py
