@@ -58,8 +58,21 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
         status = dataset["status"].values[-1]
         severity = dataset["severity"].values[-1]
         dataset.drop(dataset.index, inplace=True)
-        for i in range(len(new_times)):
-            dataset = dataset.append({"val": new_values[i], "secs": new_times[i], "status": status, "nanos": 0, "severity": severity}, ignore_index=True)
+        dataset = pandas.concat(
+            [
+                dataset,
+                pandas.DataFrame(
+                    {
+                        "val": new_values,
+                        "secs": new_times,
+                        "status": [status] * len(new_values),
+                        "nanos": [0] * len(new_values),
+                        "severity": [severity] * len(new_values),
+                    }
+                ),
+            ],
+            ignore_index=True,
+        )
 
     dataset["status_label"] = dataset.apply(lambda row: EpicsStatus(row["status"]), axis=1)
     dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
@@ -93,9 +106,6 @@ class JsonEndPointArchiver(EndPoint):
             return self.getEmptyResult()
 
     def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None, entries_warning_limit=5000, iteration=24) -> dict:
-        if iteration == 0:
-            warnings.warn("No data found in the increased time window, returning empty result.")
-            return {"data": []}
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
@@ -114,13 +124,17 @@ class JsonEndPointArchiver(EndPoint):
 
         toReturn = requests.get(nth_url).json()
         if not len(toReturn) or not len(toReturn[0].get("data", [])):
-            return self._getJSONRequest(
-                PV,
-                start_date=start_date - datetime.timedelta(hours=1),
-                end_date=start_date,
-                entries_limit=entries_limit,
-                iteration=iteration - 1,
-            )
+            if iteration > 0:
+                return self._getJSONRequest(
+                    PV,
+                    start_date=start_date - datetime.timedelta(hours=1),
+                    end_date=start_date,
+                    entries_limit=entries_limit,
+                    iteration=iteration - 1,
+                )
+            else:
+                warnings.warn("No data found (in the increased time window), returning empty result.")
+                return {"data": []}
         return toReturn[0]
 
     def _countEntries(self, PV, start_date, end_date) -> int:
