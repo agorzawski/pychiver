@@ -10,7 +10,7 @@ SIMPLE_JSON_EXAMPLE = {
 JSON_FOR_CONFIG_PVS = [
     {
         "snapshotId": 3076,
-        "configPv": {"pvName": "Lucifer PV"},
+        "snapshotItems": {"pvName": "Lucifer PV"},
         "value": {
             "type": {"name": "VDoubleArray", "version": 1},
             "value": -666,
@@ -35,10 +35,10 @@ class TestSARItems(unittest.TestCase):
             SARSnapshot(**SIMPLE_JSON_EXAMPLE)
 
     def test_correct_init_snapshot(self):
-        SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, "snapshotConfigPVs": JSON_FOR_CONFIG_PVS})
+        SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, "snapshotItems": JSON_FOR_CONFIG_PVS})
 
     def test_correct_snapshot_build_dataframe(self):
-        ll = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, "snapshotConfigPVs": JSON_FOR_CONFIG_PVS})
+        ll = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE, "snapshotItems": JSON_FOR_CONFIG_PVS})
         print(ll.getStoredValues())
 
     def test_incorrect_init_configpv(self):

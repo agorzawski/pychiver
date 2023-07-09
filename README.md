@@ -15,8 +15,10 @@ A python package providing a wrapped utility service:
 To set up the client, all one needs is the following call:
 ```python
 from pychiver.archiver import Archiver
-archiver = Archiver(archiver_url='http://archiver-01.tn.esss.lu.se')
+archiver = Archiver()
 ```
+> Note: if no dedicated `archiver_url` will be provided a  `pychiver.instances.DEFAULT_ARCHIVER` will be used.
+
 Specify what and from when is going to be extracted
 ```python
 start = "2021-06-17 18:00:00"

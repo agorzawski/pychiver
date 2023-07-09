@@ -2,8 +2,28 @@
 AD/Operations
 Arek Gorzawski 2021, ESS
 """
-import datetime
+from datetime import datetime, timedelta
 import dateutil.parser
+
+DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def getPeriods(date=datetime.now(), periods=1, period_length_in_hours=1) -> list:
+    """
+    Returns a list of tuples for start and end date of the defined period
+    :param date: start date, default now.
+    :param periods: number of defined periods, default 1
+    :param period_length_in_hours: length of the
+    :return:
+    """
+    periodsL = []
+    now = date
+    for one in range(0, periods):
+        prev = now - timedelta(hours=period_length_in_hours)
+        periodsL.append((prev, now))
+        now = prev
+    periodsL.reverse()
+    return periodsL
 
 
 def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
@@ -22,12 +42,12 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
         raise ValueError("Cannot validate NONE start_date")
 
     if end_date is None:
-        end_date = datetime.datetime.now()
+        end_date = datetime.now()
 
-    if not isinstance(start_date, (datetime.datetime, str)):
+    if not isinstance(start_date, (datetime, str)):
         raise ValueError("Wrong start_date format (neither date time nor string)!")
 
-    if not isinstance(end_date, (datetime.datetime, str)):
+    if not isinstance(end_date, (datetime, str)):
         raise ValueError("Wrong end_date format (neither date time nor string)!")
 
     return getDateTimeObj(start_date), getDateTimeObj(end_date)
@@ -48,12 +68,22 @@ def validateTimeStamps(start_date, end_date=None) -> tuple:
     return _getTimeStampFormatted(s), _getTimeStampFormatted(e)
 
 
-def getDateTimeObj(date_obj) -> datetime.datetime:
-    if isinstance(date_obj, str):
-        date_obj = dateutil.parser.parse(date_obj)
-    elif not isinstance(date_obj, datetime.datetime):
-        raise ValueError(f"date string of wrong type {type(date_obj)}")
-    return date_obj
+def getDateTimeObj(date) -> datetime:
+    if isinstance(date, str):
+        date = dateutil.parser.parse(date)
+    elif not isinstance(date, datetime):
+        raise ValueError(f"date string of wrong type {type(date)}")
+    return date
+
+
+def getDateTimeString(date_obj: datetime, format=DEFAULT_DATE_FORMAT) -> str:
+    """
+    Converts datetime to string with given
+    :param date_obj:
+    :param format:
+    :return: a string formated date
+    """
+    return datetime.strftime(date_obj, format)
 
 
 def _getTimeStampFormatted(date_obj) -> str:

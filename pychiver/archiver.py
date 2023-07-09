@@ -36,10 +36,11 @@ from .calculations import LinearInterpolationStrategy, alignDataFrames, calculat
 from .domain import PVMetaInfo
 from .endpoints import JsonEndPointArchiver
 from . import config
+from .instances import DEFAULT_ARCHIVER
 
 
 class Archiver:
-    def __init__(self, archiver_url=None, DefaultEndPoint=JsonEndPointArchiver):
+    def __init__(self, archiver_url=DEFAULT_ARCHIVER, DefaultEndPoint=JsonEndPointArchiver):
         """
         Initializes the archiver with a provided url. If no url provided,
         a system environment EPICS_ARCHIVER_URL is asked, if not set raises ValueError

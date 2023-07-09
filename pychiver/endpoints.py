@@ -40,8 +40,10 @@ class EndPoint:
 
 def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
     """
-    Fixes the data set. by creating
+    Fixes the data set when only ONE data point is extracted, by creating 'fake' two points of the same value at the
+    boundary of the requested time span.
 
+    NOTE: This fix ONLY applies for the scalars, if single data point as waveform is extracted, the fix is skipped!
 
     :param dataset:
     :param start_date:
@@ -49,6 +51,9 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
     :return:
     """
     if len(dataset) < 2:
+        if len(dataset) and isinstance(dataset["val"][0], list):
+            return dataset
+
         from .calculations import LinearInterpolationStrategy
 
         warnings.warn("No value found in the the initial Time range, search extended to the earlier 24h.")
