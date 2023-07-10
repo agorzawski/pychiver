@@ -110,7 +110,7 @@ class JsonEndPointArchiver(EndPoint):
             warnings.warn("No data returned in the requested date range, returning empty dataset!")
             return self.getEmptyResult()
 
-    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=None, entries_warning_limit=5000, iteration=24) -> dict:
+    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=5000, entries_warning_limit=5000, iteration=24) -> dict:
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
