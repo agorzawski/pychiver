@@ -56,7 +56,6 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
         dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
         dataset["secs_nanos"] = dataset["secs"] + dataset["nanos"] / 1e9
         dataset["time"] = pandas.to_datetime(dataset["secs_nanos"], unit="s")
-        
 
     if len(dataset) < 2:
         if len(dataset) and isinstance(dataset["val"][0], list):
