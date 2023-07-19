@@ -50,8 +50,16 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
     :param end_date:
     :return:
     """
+
+    def _append_data():
+        dataset["status_label"] = dataset.apply(lambda row: EpicsStatus(row["status"]), axis=1)
+        dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
+        dataset["secs_nanos"] = dataset["secs"] + dataset["nanos"] / 1e9
+        dataset["time"] = pandas.to_datetime(dataset["secs_nanos"], unit="s")
+
     if len(dataset) < 2:
         if len(dataset) and isinstance(dataset["val"][0], list):
+            _append_data()
             return dataset
 
         from .calculations import LinearInterpolationStrategy
@@ -79,10 +87,7 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
             ignore_index=True,
         )
 
-    dataset["status_label"] = dataset.apply(lambda row: EpicsStatus(row["status"]), axis=1)
-    dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
-    dataset["secs_nanos"] = dataset["secs"] + dataset["nanos"] / 1e9
-    dataset["time"] = pandas.to_datetime(dataset["secs_nanos"], unit="s")
+    _append_data()
     return dataset
 
 
