@@ -73,7 +73,7 @@ class SARConfig(SARItem):
 class SARConfigPV:
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
-        if kwargs.get("snapshotItems", None) is None:
+        if kwargs.get("configPv", None) is None:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or readbackPvName in the configPV")
 
     def __repr__(self):
