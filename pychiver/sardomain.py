@@ -39,7 +39,7 @@ class SARItem:
         return self.name
 
     def __repr__(self):
-        return "{}/{}".format(self.name, self.uniqueId)
+        return "{} / {}".format(self.name, self.uniqueId)
 
 
 class SARFolder(SARItem):
@@ -77,7 +77,7 @@ class SARConfigPV:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or readbackPvName in the configPV")
 
     def __repr__(self):
-        return "{}/{}".format(self.snapshotItems["pvName"], self.snapshotItems.get("readbackPvName", "no readback PV"))
+        return "{} / {}".format(self.snapshotItems["pvName"], self.snapshotItems.get("readbackPvName", "no readback PV"))
 
 
 class SARSnapshot(SARItem):
@@ -96,7 +96,7 @@ class SARSnapshot(SARItem):
             self.configPVs.append(SARConfigPV(**one))
 
     def __repr__(self):
-        base = "{}/{} ".format(self.name, self.uniqueId)
+        base = "{} / {} ".format(self.name, self.uniqueId)
         if self.properties.get("golden") == "true":
             base += " GOLDEN"
         return base
@@ -141,7 +141,7 @@ class SARVirtualSnapshot(SARItem):
             self.snapshots.append(one)
 
     def __repr__(self):
-        base = "VIRTUAL: {}/{} ".format(self.name, self.uniqueId)
+        base = "VIRTUAL: {} / {} ".format(self.name, self.uniqueId)
         return base
 
     def getSnapshots(self):
