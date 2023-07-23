@@ -10,7 +10,7 @@ SIMPLE_JSON_EXAMPLE = {
 JSON_FOR_CONFIG_PVS = [
     {
         "snapshotId": 3076,
-        "configPv": {"pvName": "Lucifer PV", "readbackPvName":'blah'},
+        "configPv": {"pvName": "Lucifer PV", "readbackPvName": "blah"},
         "value": {
             "type": {"name": "VDoubleArray", "version": 1},
             "value": -666,

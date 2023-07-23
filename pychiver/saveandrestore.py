@@ -105,23 +105,22 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         toReturn = []
         if nodeType == NodeType.NONE:
             for one in requests.get(self.url_snapshots).json():
-                toReturn.append(SARItem(**one))                
-            
+                toReturn.append(SARItem(**one))
+
         elif nodeType == NodeType.VIRTUAL_SNAPSHOT:
             for one in requests.get(self.url_snapshots).json():
-                if "COMPOSITE" in one['nodeType']:
-                    toReturn.append(SARItem(**one))   
-                        
+                if "COMPOSITE" in one["nodeType"]:
+                    toReturn.append(SARItem(**one))
+
         elif nodeType == NodeType.SNAPSHOT:
             for one in requests.get(self.url_snapshots).json():
-                toReturn.append(self.getSnapshot(one["uniqueId"]))        
+                toReturn.append(self.getSnapshot(one["uniqueId"]))
         else:
             raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
-        
+
         for one in toReturn:
             mainTree[one.uniqueId] = one
         return toReturn
-        
 
     def getChildren(self, uniqueId=None, forcedTypeTuple=None):
         if uniqueId is None:
@@ -231,14 +230,14 @@ class SaveAndRestore:
         """
         print("Getting available snapshots for config " + configUniqueId)
         # TODO add support for config names
-        
+
         if config is not None and configUniqueId is not None:
-            raise ValueError("You need to providfe SARConfig or congfigUniqueId")               
-            
-        if not isinstance(config, SARConfig) and configUniqueId is None:            
-            raise ValueError("Cannot find snapshots for not SARConfig")                       
-        
-        uniqueId = configUniqueId if configUniqueId is not None else config.uniqueId        
+            raise ValueError("You need to providfe SARConfig or congfigUniqueId")
+
+        if not isinstance(config, SARConfig) and configUniqueId is None:
+            raise ValueError("Cannot find snapshots for not SARConfig")
+
+        uniqueId = configUniqueId if configUniqueId is not None else config.uniqueId
         allInParentConfig = self.service.getChildren(uniqueId=uniqueId)
         toReturn = {}
         for one in allInParentConfig:
