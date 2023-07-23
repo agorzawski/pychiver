@@ -184,7 +184,7 @@ def _append_config(rowsList, one: SARConfigPV):
     secs_nanos = one.value.get("time").get("unixSec") + one.value.get("time").get("nanoSec") / 1e9
     rowsList.append(
         {
-            "pv_name": one.snapshotItems.get("pvName"),
+            "pv_name": one.configPv.get("pvName"),
             "timestamp": pd.to_datetime(secs_nanos, unit="s"),
             "secs_nanos": secs_nanos,
             "status_label": one.value.get("alarm").get("status"),  # TODO use EpicsStatus codes.py
