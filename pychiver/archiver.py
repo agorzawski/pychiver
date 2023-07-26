@@ -28,11 +28,12 @@ Authors:
 
 import os
 import warnings
+from typing import Any, Union
 
 import numpy
 import pandas
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge
+from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge, Calculation
 from .domain import PVMetaInfo
 from .endpoints import JsonEndPointArchiver
 from . import config
@@ -59,7 +60,7 @@ class Archiver:
 
         self.archiver = DefaultEndPoint(archiver_url=archiver_url)
 
-    def get(self, PV, start_date, end_date=None, entries_limit=None, force_non_archived=False, max_number_of_hours_back=24):
+    def get(self, PV, start_date, end_date=None, entries_limit=None, force_non_archived=False, max_number_of_hours_back=24, calc=Calculation.NTH):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
 
@@ -67,6 +68,8 @@ class Archiver:
         :param start_date:
         :param end_date: default None => now()
         :param entries_limit: default None, ie. all entries are extracted
+        :param calc: default cluster-side calculation applied for the extracted data, default=NTH ->
+         only decimation coming from the entries_limit
         :param max_number_of_hours_back: default 24, specifies for how many hours back archiver should be asked
                             if no data is found in between the start and end date
         :param force_non_archived: default False, when True, an attempt to extract archived data is made,
@@ -91,6 +94,7 @@ class Archiver:
                     entries_limit=e_limit,
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
+                    calc=calc,
                 )[0]
             return dataToReturn
         else:
@@ -104,8 +108,16 @@ class Archiver:
                     entries_limit=entries_limit,
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
+                    calc=calc,
                 )[0]
             }
+
+    def getAtTime(self, PVs: list, time: None) -> pandas.DataFrame:
+        # TODO support finding PVs at one time, returns simple data frame with
+        #  PV as a key / time (requested) / time (closes to requested)/ value
+        # TODO may need InterpolationStrategy in the parameter -> see getAligned with externally provided timebase
+        # TODO see with compare()
+        raise NotImplementedError("Not implemented yet")
 
     def getWaveform(self, onePV: str, start_date, end_date=None, force_non_archived=False) -> pandas.DataFrame:
         """
@@ -253,8 +265,16 @@ class Archiver:
         return self.archiver.getPVStatus(PV, info_type=info_type)
 
     def _get(
-        self, onePV: str, start_date, end_date=None, entries_limit: int = None, waveform_alert=True, force_non_archived=False, max_number_of_hours_back=24
-    ) -> pandas.DataFrame:
+        self,
+        onePV: str,
+        start_date,
+        end_date=None,
+        entries_limit: int = None,
+        waveform_alert=True,
+        force_non_archived=False,
+        max_number_of_hours_back=24,
+        calc=Calculation.NTH,
+    ) -> tuple[Union[pandas.DataFrame, Any], bool]:
         isWaveform = False
         status = self.check(onePV)
         df = self.archiver.getEmptyResult()
@@ -265,7 +285,7 @@ class Archiver:
             pass
         else:
             df = self.archiver.getDataForPV(
-                onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit, max_number_of_hours_back=max_number_of_hours_back
+                onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit, max_number_of_hours_back=max_number_of_hours_back, calc=calc
             )
         try:
             if len(df) > 0 and len(df["val"][0]):

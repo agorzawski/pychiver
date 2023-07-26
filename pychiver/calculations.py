@@ -182,6 +182,21 @@ def get_fft(fftMethodIndex, array_in):
         return array_in
 
 
+class Calculation(Enum):
+    """
+    https://slacmshankar.github.io/epicsarchiver_docs/userguide.html and Processing of data
+    """
+
+    MEAN = "mean"
+    STD_DEV = "std"
+    MAX = "max"
+    MIN = "min"
+    COUNT = "count"
+    N_COUNT = "ncount"
+    NTH = "nth_{}"
+    MEDIAN = "median"
+
+
 class Method(Enum):
     AND = 0
     OR = 1

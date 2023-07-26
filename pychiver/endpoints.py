@@ -11,6 +11,7 @@ from json import JSONDecodeError
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
 from .domain import PVMetaInfo
+from .calculations import Calculation
 from . import config
 
 import pandas
@@ -100,10 +101,11 @@ class JsonEndPointArchiver(EndPoint):
         super().__init__(archiver_url)
         self.archiver_url_data = "{}:17668/retrieval/data/getData.json".format(archiver_url)
         self.archiver_url_mgmt = "{}:17665/mgmt/bpl".format(archiver_url)
+        self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(self.archiver_url_data)
 
-    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24) -> pandas.DataFrame:
+    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24, calc=Calculation.NTH) -> pandas.DataFrame:
         try:
-            jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit, iteration=max_number_of_hours_back)
+            jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit, iteration=max_number_of_hours_back, calc=calc)
             # TODO think about putting the iterative search for an earlier value up to the Archiver class
             json_data = jsonReturn["data"]
             dataset = pandas.read_json(json.dumps(json_data))
@@ -115,24 +117,25 @@ class JsonEndPointArchiver(EndPoint):
             warnings.warn("No data returned in the requested date range, returning empty dataset!")
             return self.getEmptyResult()
 
-    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=5000, entries_warning_limit=5000, iteration=24) -> dict:
+    def _getJSONRequest(self, PV, start_date, end_date=None, entries_limit=5000, entries_warning_limit=5000, iteration=24, calc=Calculation.NTH) -> dict:
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date_str, end_date_str)
         if not entries:
             config.printVerbose(f"No data found for '{PV}', trying earlier than: start:{start_date} until {end_date}")
         # TODO see if the recursive call should be here
+        # TODO see if implicit calc def here is needed
         if entries_limit is None:
             entries_limit = max(entries, 1)
         if entries > entries_warning_limit:
             warnings.warn(f"You are about to extract {entries} samples, this operation may take significant amount of time...")
         nth = int(entries // entries_limit)
         if nth == 0:
-            warnings.warn(f"In the selected time range, the number of entries={entries} is under the specified limit={entries_limit}")
+            # warnings.warn(f"In the selected time range, the number of entries={entries} is under the specified limit={entries_limit}")
             nth = 1
-        nth_url = f"{self.archiver_url_data}?pv=nth_{nth}({PV})&from={start_date_str}&to={end_date_str}"
-
-        toReturn = requests.get(nth_url).json()
+        if calc != Calculation.NTH:
+            nth = max(entries, 1)
+        toReturn = self._get_data_request(PV, start_date_str, end_date_str, calc=calc, nth=nth).json()
         if not len(toReturn) or not len(toReturn[0].get("data", [])):
             if iteration > 0:
                 return self._getJSONRequest(
@@ -147,7 +150,16 @@ class JsonEndPointArchiver(EndPoint):
                 return {"data": []}
         return toReturn[0]
 
-    def _countEntries(self, PV, start_date, end_date) -> int:
+    def _get_data_request(self, PV, start_date, end_date, calc=Calculation.NTH, nth=1) -> requests.request:
+        func = calc.value.format(nth)
+        url = self.archiver_aggregating_url.format(func, PV, start_date, end_date)
+        print(url)
+        res = requests.get(url)
+        if res.status_code != 200:
+            raise ValueError(f"Failed to get request: {url}, status {res.status_code}")
+        return res
+
+    def _countEntries(self, PV, start_date, end_date, calc=Calculation.COUNT) -> int:
         """
         Returns counted entries for the PV in a given time range
 
@@ -156,8 +168,7 @@ class JsonEndPointArchiver(EndPoint):
         :param end_date:
         :return:
         """
-        count_url = f"{self.archiver_url_data}?pv=count({PV})&from={start_date}&to={end_date}"
-        res = requests.get(count_url)
+        res = self._get_data_request(PV, start_date, end_date, calc=Calculation.COUNT)
         if res.status_code != 200:
             raise ValueError(f"Failed to count entries for {PV}, status {res.status_code}")
         json_data = res.json()[0]["data"]
