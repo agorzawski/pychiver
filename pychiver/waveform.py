@@ -40,7 +40,7 @@ class WaveformCollector(ABC):
         self._callback = callback
         self._callback_delay = timedelta(seconds=callback_delay_in_seconds)
         self._callback_last_call = datetime.now()
-        self._dataframe = pandas.DataFrame(columns={"time", "secs", "secs_nanos", "val"})
+        self._dataframe = pandas.DataFrame(columns=["time", "secs", "secs_nanos", "val"])
         # TODO make conf with columns names across archiver and waveforms dataframes
 
     def getLastWaveform(self, timestamp=None, last=1) -> pandas.DataFrame:
