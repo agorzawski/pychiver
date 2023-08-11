@@ -4,8 +4,13 @@ Arek Gorzawski 2021, ESS
 """
 from datetime import datetime, timedelta
 import dateutil.parser
+from dateutil import tz
+from dateutil.tz import tzutc, tzlocal
+import pytz
+import warnings
+from urllib.parse import quote
 
-DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f%z" 
 
 
 def getPeriods(date=datetime.now(), periods=1, period_length_in_hours=1) -> list:
@@ -32,7 +37,7 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
     Accepted objects: string (with format ) or datetime object
 
     :param start_date:
-    :param end_date: default is None, that translates into datetime.now()
+    :param end_date: default is None, that translates into datetime.utcnow()
     :return: two datetime objects for the start and the end date
 
     :raises ValueError if wrong type of objects provided
@@ -42,7 +47,7 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
         raise ValueError("Cannot validate NONE start_date")
 
     if end_date is None:
-        end_date = datetime.now()
+        end_date = datetime.utcnow().replace(tzinfo = tz.UTC) 
 
     if not isinstance(start_date, (datetime, str)):
         raise ValueError("Wrong start_date format (neither date time nor string)!")
@@ -67,13 +72,40 @@ def validateTimeStamps(start_date, end_date=None) -> tuple:
     s, e = validateTimeStampsReturnObjects(start_date, end_date)
     return _getTimeStampFormatted(s), _getTimeStampFormatted(e)
 
-
 def getDateTimeObj(date) -> datetime:
+    """
+    Verify that a given string or datetime object is of the correct format. If not, then try to convert it while 
+    raising warnings, and if unsuccessful, raise ValueError. Otherwise return the well formatted datetime object.
+
+    :param date: ISO-8601 compatible string (including UTC offset) -OR- datetime object with UTC dateutil timezone
+    :return: datetime object in UTC (with dateutil, not pytz)
+    :raises ValueError if input is incorrect or malformed.
+    """
     if isinstance(date, str):
         date = dateutil.parser.parse(date)
+
     elif not isinstance(date, datetime):
         raise ValueError(f"date string of wrong type {type(date)}")
-    return date
+
+    # ISO-8601 compatible string or UTC aware datetime object received.
+    if isinstance(date.tzinfo, dateutil.tz.tz.tzutc):        
+        return date
+
+    # input is not great, not terrible. Convert to the better format.
+    if date.tzinfo is None:
+        warnings.warn('No time offset given. Assuming UTC.')
+        return date.replace(tzinfo = tz.UTC)
+    if isinstance(date.tzinfo, dateutil.tz.tz.tzoffset):
+        # this is not necessarily bad. Future improvements should take note of offset given, and return data with the same offset, unless otherwise specified.
+        warnings.warn('Non-UTC time offset given. Converting to UTC') 
+        return date.astimezone(tz.UTC)
+    if isinstance(date.tzinfo, pytz.BaseTzInfo):
+        # pytz is obsolete, and dateutil preferred.
+        warnings.warn('pytz tzoffset received. Converting to dateutil tzinfo = tz.UTC') 
+        return date.astimezone(tzutc()).replace(tzinfo = tz.UTC)
+
+    # No conversion attempts successful.
+    raise ValueError(f"Unknown time offset: {type(date.tzinfo)}")
 
 
 def getDateTimeString(date_obj: datetime, format=DEFAULT_DATE_FORMAT) -> str:
@@ -88,12 +120,11 @@ def getDateTimeString(date_obj: datetime, format=DEFAULT_DATE_FORMAT) -> str:
 
 def _getTimeStampFormatted(date_obj) -> str:
     """
-    Formats the provided object or string (according to the input format) into the Archiver date format,
-    in datetime().isoformat()+Z
+    Formats the provided object or string (according to the input format) into URL-encoded string for the ESS archiver
 
     :param date_obj: date object (string or datetime)
     :param date_input_format: default "%Y-%m-%d %H:%M:%S"
-    :return: ESS Archiver formatted date string
+    :return: ISO-8601 string formatted for passing as a GET request, compatible with ESS Archiver
     """
     date_obj = getDateTimeObj(date_obj)
-    return date_obj.isoformat() + "Z"
+    return quote(date_obj.isoformat())
