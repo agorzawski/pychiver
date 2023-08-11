@@ -258,7 +258,7 @@ class Archiver:
     ) -> pandas.DataFrame:
 
         start_date = getDateTimeObj(start_date)
-        if end_date != None:
+        if end_date is not None:
             end_date = getDateTimeObj(end_date)
 
         isWaveform = False

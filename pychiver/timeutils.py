@@ -5,7 +5,7 @@ Arek Gorzawski 2021, ESS
 from datetime import datetime, timedelta
 import dateutil.parser
 from dateutil import tz
-from dateutil.tz import tzutc, tzlocal
+from dateutil.tz import tzutc
 import pytz
 import warnings
 from urllib.parse import quote
@@ -47,7 +47,7 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
         raise ValueError("Cannot validate NONE start_date")
 
     if end_date is None:
-        end_date = datetime.utcnow().replace(tzinfo = tz.UTC) 
+        end_date = datetime.utcnow().replace(tzinfo = tz.UTC)
 
     if not isinstance(start_date, (datetime, str)):
         raise ValueError("Wrong start_date format (neither date time nor string)!")
@@ -74,7 +74,7 @@ def validateTimeStamps(start_date, end_date=None) -> tuple:
 
 def getDateTimeObj(date) -> datetime:
     """
-    Verify that a given string or datetime object is of the correct format. If not, then try to convert it while 
+    Verify that a given string or datetime object is of the correct format. If not, then try to convert it while
     raising warnings, and if unsuccessful, raise ValueError. Otherwise return the well formatted datetime object.
 
     :param date: ISO-8601 compatible string (including UTC offset) -OR- datetime object with UTC dateutil timezone
@@ -88,7 +88,7 @@ def getDateTimeObj(date) -> datetime:
         raise ValueError(f"date string of wrong type {type(date)}")
 
     # ISO-8601 compatible string or UTC aware datetime object received.
-    if isinstance(date.tzinfo, dateutil.tz.tz.tzutc):        
+    if isinstance(date.tzinfo, dateutil.tz.tz.tzutc):
         return date
 
     # input is not great, not terrible. Convert to the better format.
@@ -97,11 +97,11 @@ def getDateTimeObj(date) -> datetime:
         return date.replace(tzinfo = tz.UTC)
     if isinstance(date.tzinfo, dateutil.tz.tz.tzoffset):
         # this is not necessarily bad. Future improvements should take note of offset given, and return data with the same offset, unless otherwise specified.
-        warnings.warn('Non-UTC time offset given. Converting to UTC') 
+        warnings.warn('Non-UTC time offset given. Converting to UTC')
         return date.astimezone(tz.UTC)
     if isinstance(date.tzinfo, pytz.BaseTzInfo):
         # pytz is obsolete, and dateutil preferred.
-        warnings.warn('pytz tzoffset received. Converting to dateutil tzinfo = tz.UTC') 
+        warnings.warn('pytz tzoffset received. Converting to dateutil tzinfo = tz.UTC')
         return date.astimezone(tzutc()).replace(tzinfo = tz.UTC)
 
     # No conversion attempts successful.
