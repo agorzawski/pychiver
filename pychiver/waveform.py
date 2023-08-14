@@ -219,7 +219,7 @@ class ManyPVSWaveformCollector(CommonRealTimeWaveformCollector):
 
 
 class ArchiverWaveformCollector(WaveformCollector):
-    def __init__(self, PV, start_date, end_date=None, archiver_url=None, force_non_archived=False, **kwargs):
+    def __init__(self, PV, start_date, end_date=None, archiver_url=None, force_non_archived=False, max_number_of_hours_back=24, **kwargs):
         """
         Implementation of the WaveformCollector.
 
@@ -233,9 +233,13 @@ class ArchiverWaveformCollector(WaveformCollector):
             raise ValueError("Use one WaveformCollector per one PV")
         super().__init__(PV, **kwargs)
         self._archiver = Archiver(archiver_url=archiver_url)
-        self._dataframe = self._fetch_values(PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived)
+        self._dataframe = self._fetch_values(
+            PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived, max_number_of_hours_back=max_number_of_hours_back
+        )
 
         # TODO initialize the auto refresh to call self._callback()
 
-    def _fetch_values(self, PV, start_date, end_date=None, force_non_archived=False):
-        return self._archiver.getWaveform(PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived)
+    def _fetch_values(self, PV, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24):
+        return self._archiver.getWaveform(
+            PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived, max_number_of_hours_back=max_number_of_hours_back
+        )
