@@ -4,7 +4,7 @@ from pychiver.timeutils import validateTimeStamps, getPeriods, getDateTimeObj, g
 import datetime
 
 CORRECT_DATE = "2011-12-21 12:12:12"
-CORRECT_DATE_PERIOD_TEST = "2011-12-21 10:12:12"
+CORRECT_DATE_PERIOD_TEST = "2011-12-21 10:12:12.000000+0000"
 
 
 class TestStartDateChecks(unittest.TestCase):
