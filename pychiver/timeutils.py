@@ -10,7 +10,7 @@ import pytz
 import warnings
 from urllib.parse import quote
 
-DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f%z" 
+DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f%z"
 
 
 def getPeriods(date=datetime.now(), periods=1, period_length_in_hours=1) -> list:
@@ -47,7 +47,7 @@ def validateTimeStampsReturnObjects(start_date, end_date=None) -> tuple:
         raise ValueError("Cannot validate NONE start_date")
 
     if end_date is None:
-        end_date = datetime.utcnow().replace(tzinfo = tz.UTC)
+        end_date = datetime.utcnow().replace(tzinfo=tz.UTC)
 
     if not isinstance(start_date, (datetime, str)):
         raise ValueError("Wrong start_date format (neither date time nor string)!")
@@ -72,6 +72,7 @@ def validateTimeStamps(start_date, end_date=None) -> tuple:
     s, e = validateTimeStampsReturnObjects(start_date, end_date)
     return _getTimeStampFormatted(s), _getTimeStampFormatted(e)
 
+
 def getDateTimeObj(date) -> datetime:
     """
     Verify that a given string or datetime object is of the correct format. If not, then try to convert it while
@@ -93,16 +94,16 @@ def getDateTimeObj(date) -> datetime:
 
     # input is not great, not terrible. Convert to the better format.
     if date.tzinfo is None:
-        warnings.warn('No time offset given. Assuming UTC.')
-        return date.replace(tzinfo = tz.UTC)
+        warnings.warn("No time offset given. Assuming UTC.")
+        return date.replace(tzinfo=tz.UTC)
     if isinstance(date.tzinfo, dateutil.tz.tz.tzoffset):
         # this is not necessarily bad. Future improvements should take note of offset given, and return data with the same offset, unless otherwise specified.
-        warnings.warn('Non-UTC time offset given. Converting to UTC')
+        warnings.warn("Non-UTC time offset given. Converting to UTC")
         return date.astimezone(tz.UTC)
     if isinstance(date.tzinfo, pytz.BaseTzInfo):
         # pytz is obsolete, and dateutil preferred.
-        warnings.warn('pytz tzoffset received. Converting to dateutil tzinfo = tz.UTC')
-        return date.astimezone(tzutc()).replace(tzinfo = tz.UTC)
+        warnings.warn("pytz tzoffset received. Converting to dateutil tzinfo = tz.UTC")
+        return date.astimezone(tzutc()).replace(tzinfo=tz.UTC)
 
     # No conversion attempts successful.
     raise ValueError(f"Unknown time offset: {type(date.tzinfo)}")

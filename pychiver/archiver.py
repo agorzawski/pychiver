@@ -120,7 +120,14 @@ class Archiver:
         """
         if not isinstance(onePV, str):
             raise ValueError("Only one waveform at the time! Too many or none PVs provided.")
-        return self._get(onePV, start_date=start_date, end_date=end_date, waveform_alert=False, force_non_archived=force_non_archived, max_number_of_hours_back=max_number_of_hours_back)[0]
+        return self._get(
+            onePV,
+            start_date=start_date,
+            end_date=end_date,
+            waveform_alert=False,
+            force_non_archived=force_non_archived,
+            max_number_of_hours_back=max_number_of_hours_back,
+        )[0]
 
     def getAligned(
         self,
@@ -256,7 +263,6 @@ class Archiver:
     def _get(
         self, onePV: str, start_date, end_date=None, entries_limit: int = None, waveform_alert=True, force_non_archived=False, max_number_of_hours_back=24
     ) -> pandas.DataFrame:
-
         start_date = getDateTimeObj(start_date)
         if end_date is not None:
             end_date = getDateTimeObj(end_date)
