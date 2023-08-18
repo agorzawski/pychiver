@@ -4,3 +4,4 @@
 *checkpoints*
 *.egg-info
 build
+/tests/johanna_test.py
