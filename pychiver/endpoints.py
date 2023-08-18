@@ -97,7 +97,11 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
 
 
 class PVDataType(Enum):
-    DBR_SCALAR_DOUBLE = 8  # Change this
+    """
+    Simple enum of available archiver types into size in bytes.
+    """
+
+    DBR_SCALAR_DOUBLE = 8
     DBR_SCALAR_ENUM = 1
     DEFAULT = 8
 
@@ -137,15 +141,12 @@ class JsonEndPointArchiver(EndPoint):
 
     def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24, data_extraction_limit=None) -> pandas.DataFrame:
         status_details = self.getPVStatus(PV, info_type=PVMetaInfo.DETAILS)[PV]
-        pv_data_type_str = status_details["Archiver DBR type (from typeinfo):"]
-        PV_data_size = PVDataType.getDataSizefromStringRepr(pv_data_type_str)
-        nr_of_elements = int(status_details["Number of elements:"])
-
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
-        entries = self._countEntries(PV, start_date_str, end_date_str)
-
-        expected_data_size = PV_data_size * nr_of_elements * entries
-
+        expected_data_size = (
+            PVDataType.getDataSizefromStringRepr(status_details["Archiver DBR type (from typeinfo):"])
+            * int(status_details["Number of elements:"])
+            * self._countEntries(PV, start_date_str, end_date_str)
+        )
         if data_extraction_limit:
             if expected_data_size > data_extraction_limit:
                 raise ExpectedDataSizeExceedsLimitError(expected_data_size, data_extraction_limit, PV)
