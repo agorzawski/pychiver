@@ -28,16 +28,16 @@ Authors:
 
 import os
 import warnings
-from typing import Any, Union
+from typing import Tuple
 
 import numpy
-import pandas
+from pandas import DataFrame
 
 from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge, Calculation
 from .domain import PVMetaInfo
 from .endpoints import JsonEndPointArchiver
 from . import config
-from .instances import DEFAULT_ARCHIVER
+from .instances import DEFAULT_ARCHIVER, DEFAULT_MAX_EXTRACTION_SIZE
 from .timeutils import getDateTimeObj
 
 
@@ -45,7 +45,7 @@ class Archiver:
     def __init__(self, archiver_url=DEFAULT_ARCHIVER, DefaultEndPoint=JsonEndPointArchiver):
         """
         Initializes the archiver with a provided url. If no url provided,
-        a system environment EPICS_ARCHIVER_URL is asked, if not set raises ValueError
+        a system environment EPICS_ARCHIVER_URL is asked if not set raises ValueError
 
         :param archiver_url: an address for the archiver service
         :param DefaultEndPoint: implementation of the endpoint
@@ -61,9 +61,20 @@ class Archiver:
 
         self.archiver = DefaultEndPoint(archiver_url=archiver_url)
 
-    def get(self, PV, start_date, end_date=None, entries_limit=None, force_non_archived=False, max_number_of_hours_back=24, calc=Calculation.NTH):
+    def get(
+        self,
+        PV,
+        start_date,
+        end_date=None,
+        entries_limit=None,
+        force_non_archived=False,
+        max_number_of_hours_back=24,
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+        calc=Calculation.NTH
+    ):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
+        Can rise an ExpectedDataSizeExceedsLimitError if expected data extraction exceeds the limit.
 
         :param PV: one string or list of strings for PV to extract
         :param start_date:
@@ -75,6 +86,8 @@ class Archiver:
                             if no data is found in between the start and end date
         :param force_non_archived: default False, when True, an attempt to extract archived data is made,
                 may raise exception
+        :param data_extraction_limit: maximum (in bytes) allowed chunk of data to extract, default 50Mb,
+                    can be forced to skip by setting None
         :return: dict of PV to a DataFrame
         """
         useSeparateLimits = False
@@ -96,6 +109,7 @@ class Archiver:
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
                     calc=calc,
+                    data_extraction_limit=data_extraction_limit,
                 )[0]
             return dataToReturn
         else:
@@ -109,25 +123,30 @@ class Archiver:
                     entries_limit=entries_limit,
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
+                    data_extraction_limit=data_extraction_limit,
                     calc=calc,
                 )[0]
             }
 
-    def getAtTime(self, PVs: list, time: None) -> pandas.DataFrame:
+    def getAtTime(self, PVs: list, time: None) -> DataFrame:
         # TODO support finding PVs at one time, returns simple data frame with
         #  PV as a key / time (requested) / time (closes to requested)/ value
         # TODO may need InterpolationStrategy in the parameter -> see getAligned with externally provided timebase
         # TODO see with compare()
         raise NotImplementedError("Not implemented yet")
 
-    def getWaveform(self, onePV: str, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24) -> pandas.DataFrame:
+    def getWaveform(
+        self, onePV: str, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24, data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE
+    ) -> DataFrame:
         """
-        Returns an pandas DataFrame that contains a waveform
+        Returns a pandas DataFrame that contains a waveform. ExpectedDataSizeExceedsLimitError if expected data extraction exceeds the limit
 
         :param onePV: PV to be extracted
         :param start_date:
         :param end_date: default None => now()
         :param force_non_archived: default False, when True, an attempt to extract archived data is made anyway
+        :param data_extraction_limit: maximum (in bytes) allowed chunk of data to extract, default 50Mb,
+                    can be forced to skip by setting None
         :return:
         """
         if not isinstance(onePV, str):
@@ -139,6 +158,7 @@ class Archiver:
             waveform_alert=False,
             force_non_archived=force_non_archived,
             max_number_of_hours_back=max_number_of_hours_back,
+            data_extraction_limit=data_extraction_limit,
         )[0]
 
     def getAligned(
@@ -152,10 +172,12 @@ class Archiver:
         time_column="secs_nanos",
         value_columns=("val",),
         force_non_archived=False,
-    ) -> pandas.DataFrame:
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+    ) -> DataFrame:
         """
         Extracts PVs and aligns them to the timestamps of the first PV in the list or separately provided time base.
-        Uses the provided InterpolationStrategy (default one LinearInterpolationStrategy)
+        Uses the provided InterpolationStrategy (default one LinearInterpolationStrategy).
+        Can rise an ExpectedDataSizeExceedsLimitError if expected data extraction exceeds the limit.
 
         :param PVS: list of PVS (string) to be extracted
         :param start_date: start date,
@@ -168,10 +190,13 @@ class Archiver:
         :param value_columns: optional, default 'val' column will be used,
                      the alignment can be performed for many columns at the same time, provide a tuple.
         :param force_non_archived: default False, when True, an attempt to extract archived data is made anyway
-
+        :param data_extraction_limit: maximum (in bytes) allowed chunk of data to extract, default 50Mb,
+                    can be forced to skip by setting None
         :return: a DataFrame with all PVS and their values
         """
-        dict_of_dataframes = self.get(PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived)
+        dict_of_dataframes = self.get(
+            PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+        )
         if not isinstance(dict_of_dataframes, dict):
             raise ValueError("Wrong data format provided. Dict of pandas.DataFrames expected, {} provided".format(dict_of_dataframes.__class__))
         return alignDataFrames(
@@ -192,7 +217,8 @@ class Archiver:
         time_column="secs_nanos",
         value_columns=("val",),
         force_non_archived=False,
-    ) -> pandas.DataFrame:
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+    ) -> DataFrame:
         """
         Retrieves the data for a given PV and calculates the moving average for a selected window.
         The resulting dataframe is cleared from all NaN cases.
@@ -205,6 +231,8 @@ class Archiver:
         :param time_column:
         :param value_columns:
         :param force_non_archived:
+        :param data_extraction_limit: maximum (in bytes) allowed chunk of data to extract, default 50Mb,
+            can be forced to skip by setting None
         :return:
         """
         if isinstance(PV, list) or isinstance(PV, tuple) or isinstance(PV, dict):
@@ -212,11 +240,13 @@ class Archiver:
                 "Cannot handle more than one PV at the time. \
                                 Use getAligned together with calculations.calculateMovingAverage"
             )
-        df, isWaveform = self._get(PV, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived)
+        df, isWaveform = self._get(
+            PV, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+        )
         if isWaveform:
             warnings.warn("Moving average over the waveform is not implemented! Returning simple DataForm")
             return df
-        return calculateMovingAverage(df[PV], window=window, time_column=time_column, value_columns=value_columns)
+        return calculateMovingAverage(df, window=window, time_column=time_column, value_columns=value_columns)
 
     def compare(
         self,
@@ -253,7 +283,7 @@ class Archiver:
         closeTimeStamps = findCloseTimestamps(dfs, tolerance_in_seconds=tolerance_in_seconds, edge_to_use=compare_edge)
         return closeTimeStamps
 
-    def getPulseData(self, cycle_id: int) -> pandas.DataFrame:
+    def getPulseData(self, cycle_id: int) -> DataFrame:
         """
         Returns data associated with the PulseId
         :param cycle_id:
@@ -282,13 +312,14 @@ class Archiver:
         force_non_archived=False,
         max_number_of_hours_back=24,
         calc=Calculation.NTH,
-    ) -> tuple[Union[pandas.DataFrame, Any], bool]:
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+    ) -> Tuple[DataFrame, bool]:
         start_date = getDateTimeObj(start_date)
         if end_date is not None:
             end_date = getDateTimeObj(end_date)
-
         isWaveform = False
         status = self.check(onePV)
+
         df = self.archiver.getEmptyResult()
         if force_non_archived:
             warnings.warn(f"Skipping the check if {onePV} is being archived in {self.archiver_url}")
@@ -297,7 +328,13 @@ class Archiver:
             pass
         else:
             df = self.archiver.getDataForPV(
-                onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit, max_number_of_hours_back=max_number_of_hours_back, calc=calc
+                onePV,
+                start_date=start_date,
+                end_date=end_date,
+                entries_limit=entries_limit,
+                max_number_of_hours_back=max_number_of_hours_back,
+                data_extraction_limit=data_extraction_limit,
+                calc=calc
             )
         try:
             if len(df) > 0 and len(df["val"][0]):
