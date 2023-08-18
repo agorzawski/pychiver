@@ -28,7 +28,7 @@ Authors:
 
 import os
 import warnings
-from typing import Union, Any
+from typing import Tuple
 
 import numpy
 from pandas import DataFrame
@@ -300,7 +300,7 @@ class Archiver:
         force_non_archived=False,
         max_number_of_hours_back=24,
         data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
-    ) -> tuple[Union[DataFrame, Any], bool]:
+    ) -> Tuple[DataFrame, bool]:
         start_date = getDateTimeObj(start_date)
         if end_date is not None:
             end_date = getDateTimeObj(end_date)
