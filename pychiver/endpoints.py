@@ -95,30 +95,35 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
     _append_data()
     return dataset
 
-class PVDataType(Enum):
-        DBR_SCALAR_DOUBLE=8 #Change this
-        DBR_SCALAR_ENUM=1
-        DEFAULT = 8
 
-        @staticmethod
-        def getDataSizefromStringRepr(pv_data_type:str) -> int:		
-                if pv_data_type in 'DBR_SCALAR_DOUBLE':
-                        return PVDataType.DBR_SCALAR_DOUBLE.value
-                if pv_data_type in 'DBR_SCALAR_ENUM':
-                        return PVDataType.DBR_SCALAR_ENUM.value
-                else:
-                        raise PVDataType.DEFAULT.value
+class PVDataType(Enum):
+    DBR_SCALAR_DOUBLE = 8  # Change this
+    DBR_SCALAR_ENUM = 1
+    DEFAULT = 8
+
+    @staticmethod
+    def getDataSizefromStringRepr(pv_data_type: str) -> int:
+        if pv_data_type in "DBR_SCALAR_DOUBLE":
+            return PVDataType.DBR_SCALAR_DOUBLE.value
+        if pv_data_type in "DBR_SCALAR_ENUM":
+            return PVDataType.DBR_SCALAR_ENUM.value
+        else:
+            raise PVDataType.DEFAULT.value
+
 
 class ExpectedDataSizeExceedsLimitError(Exception):
     def __init__(self, expected_size, limit, pv):
-        super().__init__()        
-        self.expected_size=expected_size
-        self.limit=limit
-        self.pv=pv       
+        super().__init__()
+        self.expected_size = expected_size
+        self.limit = limit
+        self.pv = pv
 
     def __str__(self):
-        return f'The expected datasize {self.expected_size} bytes exceeds the limit {self.limit} bytes for pv {self.pv}. Set data_extraction_limit parameter to a higher value or None to force data extraction.'
-        
+        return (
+            f"The expected datasize {self.expected_size} bytes exceeds the limit {self.limit}"
+            "bytes for pv {self.pv}. Set data_extraction_limit parameter to a higher value or None to force data extraction."
+        )
+
 
 class JsonEndPointArchiver(EndPoint):
     """
@@ -130,22 +135,22 @@ class JsonEndPointArchiver(EndPoint):
         self.archiver_url_data = "{}:17668/retrieval/data/getData.json".format(archiver_url)
         self.archiver_url_mgmt = "{}:17665/mgmt/bpl".format(archiver_url)
 
-    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24, data_extraction_limit=None) -> pandas.DataFrame:	
-        status_details=self.getPVStatus(PV, info_type=PVMetaInfo.DETAILS)[PV]
-        pv_data_type_str=status_details['Archiver DBR type (from typeinfo):']
-        PV_data_size=PVDataType.getDataSizefromStringRepr(pv_data_type_str)
-        nr_of_elements=int(status_details['Number of elements:'])
-        
+    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24, data_extraction_limit=None) -> pandas.DataFrame:
+        status_details = self.getPVStatus(PV, info_type=PVMetaInfo.DETAILS)[PV]
+        pv_data_type_str = status_details["Archiver DBR type (from typeinfo):"]
+        PV_data_size = PVDataType.getDataSizefromStringRepr(pv_data_type_str)
+        nr_of_elements = int(status_details["Number of elements:"])
+
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
-        entries= self._countEntries(PV, start_date_str, end_date_str)
-        
-        expected_data_size=PV_data_size*nr_of_elements*entries
-        
+        entries = self._countEntries(PV, start_date_str, end_date_str)
+
+        expected_data_size = PV_data_size * nr_of_elements * entries
+
         if data_extraction_limit:
-            if expected_data_size>data_extraction_limit:
-                raise ExpectedDataSizeExceedsLimitError(expected_data_size, data_extraction_limit, PV)                 
-        elif not data_extraction_limit and expected_data_size>DEFAULT_MAX_EXTRACTION_SIZE:
-            warnings.warn(f"You are extracting {expected_data_size} bytes for pv {PV} it may take a while...")    
+            if expected_data_size > data_extraction_limit:
+                raise ExpectedDataSizeExceedsLimitError(expected_data_size, data_extraction_limit, PV)
+        elif not data_extraction_limit and expected_data_size > DEFAULT_MAX_EXTRACTION_SIZE:
+            warnings.warn(f"You are extracting {expected_data_size} bytes for pv {PV} it may take a while...")
 
         try:
             jsonReturn = self._getJSONRequest(PV, start_date, end_date=end_date, entries_limit=entries_limit, iteration=max_number_of_hours_back)

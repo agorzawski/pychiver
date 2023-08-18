@@ -60,7 +60,16 @@ class Archiver:
 
         self.archiver = DefaultEndPoint(archiver_url=archiver_url)
 
-    def get(self, PV, start_date, end_date=None, entries_limit=None, force_non_archived=False, max_number_of_hours_back=24, data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE):
+    def get(
+        self,
+        PV,
+        start_date,
+        end_date=None,
+        entries_limit=None,
+        force_non_archived=False,
+        max_number_of_hours_back=24,
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+    ):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
 
@@ -92,7 +101,7 @@ class Archiver:
                     entries_limit=e_limit,
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
-                    data_extraction_limit=data_extraction_limit
+                    data_extraction_limit=data_extraction_limit,
                 )[0]
             return dataToReturn
         else:
@@ -105,12 +114,14 @@ class Archiver:
                     end_date=end_date,
                     entries_limit=entries_limit,
                     force_non_archived=force_non_archived,
-                    max_number_of_hours_back=max_number_of_hours_back, 
-                    data_extraction_limit=data_extraction_limit
+                    max_number_of_hours_back=max_number_of_hours_back,
+                    data_extraction_limit=data_extraction_limit,
                 )[0]
             }
 
-    def getWaveform(self, onePV: str, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24, data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE) -> pandas.DataFrame:
+    def getWaveform(
+        self, onePV: str, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24, data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE
+    ) -> pandas.DataFrame:
         """
         Returns an pandas DataFrame that contains a waveform
 
@@ -128,8 +139,8 @@ class Archiver:
             end_date=end_date,
             waveform_alert=False,
             force_non_archived=force_non_archived,
-            max_number_of_hours_back=max_number_of_hours_back, 
-            data_extraction_limit=data_extraction_limit
+            max_number_of_hours_back=max_number_of_hours_back,
+            data_extraction_limit=data_extraction_limit,
         )[0]
 
     def getAligned(
@@ -143,7 +154,7 @@ class Archiver:
         time_column="secs_nanos",
         value_columns=("val",),
         force_non_archived=False,
-        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
     ) -> pandas.DataFrame:
         """
         Extracts PVs and aligns them to the timestamps of the first PV in the list or separately provided time base.
@@ -163,7 +174,9 @@ class Archiver:
 
         :return: a DataFrame with all PVS and their values
         """
-        dict_of_dataframes = self.get(PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit)
+        dict_of_dataframes = self.get(
+            PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+        )
         if not isinstance(dict_of_dataframes, dict):
             raise ValueError("Wrong data format provided. Dict of pandas.DataFrames expected, {} provided".format(dict_of_dataframes.__class__))
         return alignDataFrames(
@@ -205,7 +218,9 @@ class Archiver:
                 "Cannot handle more than one PV at the time. \
                                 Use getAligned together with calculations.calculateMovingAverage"
             )
-        df, isWaveform = self._get(PV, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit)
+        df, isWaveform = self._get(
+            PV, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+        )
         if isWaveform:
             warnings.warn("Moving average over the waveform is not implemented! Returning simple DataForm")
             return df
@@ -266,7 +281,15 @@ class Archiver:
         return self.archiver.getPVStatus(PV, info_type=info_type)
 
     def _get(
-        self, onePV: str, start_date, end_date=None, entries_limit: int = None, waveform_alert=True, force_non_archived=False, max_number_of_hours_back=24, data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE
+        self,
+        onePV: str,
+        start_date,
+        end_date=None,
+        entries_limit: int = None,
+        waveform_alert=True,
+        force_non_archived=False,
+        max_number_of_hours_back=24,
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
     ) -> pandas.DataFrame:
         start_date = getDateTimeObj(start_date)
         if end_date is not None:
@@ -282,7 +305,12 @@ class Archiver:
             pass
         else:
             df = self.archiver.getDataForPV(
-                onePV, start_date=start_date, end_date=end_date, entries_limit=entries_limit, max_number_of_hours_back=max_number_of_hours_back, data_extraction_limit=data_extraction_limit
+                onePV,
+                start_date=start_date,
+                end_date=end_date,
+                entries_limit=entries_limit,
+                max_number_of_hours_back=max_number_of_hours_back,
+                data_extraction_limit=data_extraction_limit,
             )
         try:
             if len(df) > 0 and len(df["val"][0]):
