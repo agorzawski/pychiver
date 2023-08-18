@@ -141,7 +141,9 @@ class JsonEndPointArchiver(EndPoint):
         self.archiver_url_mgmt = "{}:17665/mgmt/bpl".format(archiver_url)
         self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(self.archiver_url_data)
 
-    def getDataForPV(self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24, data_extraction_limit=None, calc=Calculation.NTH) -> pandas.DataFrame:
+    def getDataForPV(
+        self, PV, start_date, end_date=None, entries_limit=None, max_number_of_hours_back=24, data_extraction_limit=None, calc=Calculation.NTH
+    ) -> pandas.DataFrame:
         status_details = self.getPVStatus(PV, info_type=PVMetaInfo.DETAILS)[PV]
         start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
         expected_data_size = (

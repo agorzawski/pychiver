@@ -70,7 +70,7 @@ class Archiver:
         force_non_archived=False,
         max_number_of_hours_back=24,
         data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
-        calc=Calculation.NTH
+        calc=Calculation.NTH,
     ):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
@@ -334,7 +334,7 @@ class Archiver:
                 entries_limit=entries_limit,
                 max_number_of_hours_back=max_number_of_hours_back,
                 data_extraction_limit=data_extraction_limit,
-                calc=calc
+                calc=calc,
             )
         try:
             if len(df) > 0 and len(df["val"][0]):
