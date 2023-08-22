@@ -286,7 +286,7 @@ class Archiver:
         """
         Provides information on the requested PV(s)
         :param info_type: STATUS (default) returns info on PVs, INFO returns info on a given PVs
-        :param config_url: DEFAULT_ARCHIVER_CONF (default) returns info on which Archiver Configuration 
+        :param config_url: DEFAULT_ARCHIVER_CONF (default) returns info on which Archiver Configuration
                            files a set of PVs are found within for different URLs and how many times
         :param PV: PVs to check status or info
         :return: dict of PV to its data
