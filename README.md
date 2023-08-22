@@ -57,6 +57,14 @@ data[pvs[0]].head()
 > therefore its last state maybe saved some time before the requested window) an automatic attempt
 > for the last 24h (configurable) will be performed.
 
+### Get PVs simple calculations
+Access to simple calculations (mean, max, min, std_dev) is available by specifying the calc parameter.
+```python
+data = archiver.get(pvs, start_date=start, end_date=end, calc=Calculation.MEAN)
+# returns dict of PV -> DataFrame, each DataFrame has value of
+```
+
+
 ### Get PVs and align them together
 To get many PVs at the same time and additionally perform their 'time' alignment use:
 ```python
@@ -71,6 +79,31 @@ The following image depicts the two available implementations:
 ![](doc/pychiver-interpolations.png)
 
 > **NOTE**: this will only work for scalars! An exception will be thrown if you will mix waveforms and scalars
+
+
+### Finding correlations
+For some (enum) PVs it is common to extract/and analyse for common occurrences. The follwoing code allows to do that:
+```python
+start = "2023-06-30 12:00:00"
+end = "2023-07-01 12:00:00"
+pvs = (MPS_BCM, MPS_RF, MPS_OP_REQUESTED)
+archiver = Archiver()
+d = archiver.compareSameOccurrences(basePV=MPS_GP, PVsToCheck=pvs, start_date=start, end_date=end,)
+```
+
+The above, will search between two time stamps when `MPS_GP` pv has changed to 0, and see if any other pv (in pvs)
+did that at the same time.
+As result one can see the
+
+```commandline
+              input                  timestamp               duration
+0            MPS_RF 2023-06-30 14:12:03.988418 0 days 00:03:40.199814
+1            MPS_RF 2023-06-30 20:32:46.988230 0 days 00:02:01.199950
+2            MPS_RF 2023-06-30 20:59:53.988372 0 days 12:22:12.200300
+3  MPS_OP_REQUESTED 2023-06-30 15:49:13.989176 0 days 02:16:44.003306
+4  MPS_OP_REQUESTED 2023-06-30 19:14:26.388477 0 days 00:00:08.999877
+Total size: 30
+```
 
 ### Get PV Status
 
@@ -95,11 +128,20 @@ data = archiver.check("RFQ-010:RFS-Kly-110:Oil-Tmp")
   'status': 'Being archived'}}
 ```
 
+## Troubleshooting
+
+In very possible case of mysteries and surprises with the package behaviour it is encouraged to enable extra log: 
+```python
+from pychiver.config import setVerbose
+setVerbose()
+```
+
 
 ## TimeStamp Format
-*pychiver* supports the following formats:
+*pychiver* works with timezone aware dates. **If date is not timezone aware an UTC time stamp is assumed**. 
+Time supports the following formats:
 1) as `datetime` objects, eg:  `datetime.now()`, `datetime.strptime('2021-02-28 13:13:13', DATE_FORMAT)`
-1) as plain text e.g. `'2021-02-28 13:13:13'`, following the format `%Y-%m-%d %H:%M:%S`
+2) as plain text e.g. `'2021-02-28 13:13:13'`, following the format `%Y-%m-%d %H:%M:%S`
 
 
 # Installation
