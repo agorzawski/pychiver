@@ -23,6 +23,7 @@ import json
 import requests
 import gitlab
 
+
 class EndPoint:
     """
     Abstract end point implementation for the Archiver
@@ -32,6 +33,7 @@ class EndPoint:
         self.archiver_url = archiver_url
         if self.archiver_url is None:
             raise ValueError("Cannot instantiate Archiver without a proper link to the service.")
+        
     def getDataForPV(self, PV: str, start_date, end_date=None, entries_limit=None) -> pandas.DataFrame:
         raise NotImplementedError("Abstract implementation called, use concrete ones.")
 
