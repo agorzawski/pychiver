@@ -187,14 +187,19 @@ class Calculation(Enum):
     https://slacmshankar.github.io/epicsarchiver_docs/userguide.html and Processing of data
     """
 
-    MEAN = "mean"
-    STD_DEV = "std"
-    MAX = "max"
-    MIN = "min"
+    MEAN = "mean_{}"
+    STD_DEV = "std_{}"
+    MAX = "max_{}"
+    MIN = "min_{}"
     COUNT = "count"
     N_COUNT = "ncount"
     NTH = "nth_{}"
     MEDIAN = "median"
+
+
+class CalculationMode(Enum):
+    TOTAL = 1
+    BINNED = 2
 
 
 class Method(Enum):
@@ -210,6 +215,7 @@ class Edge(Enum):
 
 
 def findCloseTimestamps(dfs, edge_to_use=Edge.RISING, tolerance_in_seconds=1, timeColumn="secs_nanos", valueColumn="val"):
+    # TODO compare to the analysis.find_same, maybe move to analysis file
     newTs = []
     for pv in dfs.keys():
         oneDf = dfs[pv]
