@@ -3,23 +3,25 @@ ESS 2021
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
     E.Laface    <emmanuele.laface@ess.eu>
+    B.Bolling   <benjamin.bolling@ess.eu>
 """
 import datetime
 from dateutil import tz
 import warnings
+warnings.formatwarning = lambda msg, *args, **kwargs: f'{msg}\n' # Monkey-patching to remove line of source code
 from json import JSONDecodeError
 
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
 from .domain import PVMetaInfo
-from .instances import DEFAULT_MAX_EXTRACTION_SIZE
+from .instances import DEFAULT_MAX_EXTRACTION_SIZE, DEFAULT_ARCHIVER_CONF
 from . import config
 
 from enum import Enum
 import pandas
 import json
 import requests
-
+import gitlab
 
 class EndPoint:
     """
@@ -30,7 +32,6 @@ class EndPoint:
         self.archiver_url = archiver_url
         if self.archiver_url is None:
             raise ValueError("Cannot instantiate Archiver without a proper link to the service.")
-
     def getDataForPV(self, PV: str, start_date, end_date=None, entries_limit=None) -> pandas.DataFrame:
         raise NotImplementedError("Abstract implementation called, use concrete ones.")
 
@@ -217,9 +218,10 @@ class JsonEndPointArchiver(EndPoint):
             entries += i["val"]
         return int(entries)
 
-    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS) -> dict:
+    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS, config_url=DEFAULT_ARCHIVER_CONF) -> dict:
         """
         :param info_type:
+        :param config_url:
         :param PV:
         :return:
         """
@@ -232,6 +234,19 @@ class JsonEndPointArchiver(EndPoint):
         status = {statusItem["pvName"]: statusItem for statusItem in status}
         if info_type == PVMetaInfo.STATUS:
             returnData = status
+        elif info_type == PVMetaInfo.CONFIGURATION:
+            warnings.warn("XX")
+            returnData = {}
+            p = gitlab.Gitlab('https://gitlab.esss.lu.se').projects.get(config_url)
+            for pv in PV:
+                returnData[pv] = {}
+            for id, fn in [(f['id'], f['name']) for f in p.repository_tree(path='files',get_all=True) if f['name'].endswith('.archive')]:
+                all_pvs = [pv for pv in p.repository_raw_blob(id).decode().split('\n') if not pv.startswith('#') and not len(pv) == 0]
+                for pv_in in returnData.keys():
+                    if all_pvs.count(pv_in) > 0:
+                        returnData[pv_in][fn] = all_pvs.count(pv_in)
+            
+            
         else:
             returnData = {}
             for onePV in PV:
