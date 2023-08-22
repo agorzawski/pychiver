@@ -237,7 +237,7 @@ class JsonEndPointArchiver(EndPoint):
         if info_type == PVMetaInfo.STATUS:
             returnData = status
         elif info_type == PVMetaInfo.CONFIGURATION:
-            warnings.warn("XX")
+            warnings.warn("Warning: This may take some time, as all archive files will be scanned.")
             returnData = {}
             p = gitlab.Gitlab('https://gitlab.esss.lu.se').projects.get(config_url)
             for pv in PV:
