@@ -130,7 +130,7 @@ data = archiver.check("RFQ-010:RFS-Kly-110:Oil-Tmp")
 
 ## Troubleshooting
 
-In very possible case of mysteries and surprises with the package behaviour it is encouraged to enable extra log: 
+In very possible case of mysteries and surprises with the package behaviour it is encouraged to enable extra log:
 ```python
 from pychiver.config import setVerbose
 setVerbose()
@@ -138,7 +138,7 @@ setVerbose()
 
 
 ## TimeStamp Format
-*pychiver* works with timezone aware dates. **If date is not timezone aware an UTC time stamp is assumed**. 
+*pychiver* works with timezone aware dates. **If date is not timezone aware an UTC time stamp is assumed**.
 Time supports the following formats:
 1) as `datetime` objects, eg:  `datetime.now()`, `datetime.strptime('2021-02-28 13:13:13', DATE_FORMAT)`
 2) as plain text e.g. `'2021-02-28 13:13:13'`, following the format `%Y-%m-%d %H:%M:%S`
