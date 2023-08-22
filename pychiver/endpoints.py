@@ -15,7 +15,7 @@ from json import JSONDecodeError
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
 from .domain import PVMetaInfo
-from .instances import DEFAULT_MAX_EXTRACTION_SIZE, DEFAULT_ARCHIVER_CONF
+from .instances import DEFAULT_MAX_EXTRACTION_SIZE, DEFAULT_ARCHIVER_CONF, DEFAULT_ARCHIVER_URL
 from . import config
 
 from enum import Enum
@@ -221,10 +221,10 @@ class JsonEndPointArchiver(EndPoint):
             entries += i["val"]
         return int(entries)
 
-    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS, config_url=DEFAULT_ARCHIVER_CONF) -> dict:
+    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS, git_config_id=DEFAULT_ARCHIVER_CONF) -> dict:
         """
         :param info_type:
-        :param config_url:
+        :param git_config_id:
         :param PV:
         :return:
         """
@@ -240,7 +240,7 @@ class JsonEndPointArchiver(EndPoint):
         elif info_type == PVMetaInfo.CONFIGURATION:
             warnings.warn("Warning: This may take some time, as all archive files will be scanned.")
             returnData = {}
-            p = gitlab.Gitlab("https://gitlab.esss.lu.se").projects.get(config_url)
+            p = gitlab.Gitlab(DEFAULT_ARCHIVER_URL).projects.get(git_config_id)
             for pv in PV:
                 returnData[pv] = {}
             for id, fn in [(f["id"], f["name"]) for f in p.repository_tree(path="files", get_all=True) if f["name"].endswith(".archive")]:

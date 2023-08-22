@@ -8,6 +8,7 @@ ARCHIVER_WF_01 = "http://archiver-linac-wf-01.tn.esss.lu.se"
 DEFAULT_ARCHIVER = ARCHIVER_01
 
 # GIT PROJECT IDS
+DEFAULT_ARCHIVER_URL = "https://gitlab.esss.lu.se"
 DEFAULT_ARCHIVER_CONF = 8512  # Linac Archiver Appliance Project ID
 WAVEFORM_ARCHIVER_CONF = 8513  # Waveforms Archiver Appliance Project ID
 LAB_ARCHIVER_CONF = 8536  # Lab Archiver Appliance Project ID
