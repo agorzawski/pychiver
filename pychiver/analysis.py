@@ -26,7 +26,7 @@ def find_same(
     :return: dict of timestamps to detail object (dict)
     """
     if base is None or against is None:
-        raise ValueError('One needs to specify both the BASE and AGAINST PV')
+        raise ValueError("One needs to specify both the BASE and AGAINST PV")
     tmpResult = {}
     tempDFa = data[base]
     tempDFc = data[against]
