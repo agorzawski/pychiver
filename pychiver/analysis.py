@@ -4,7 +4,7 @@ from . import config
 
 def find_same(
     data,
-    base,
+    base=None,
     against=None,
     margin_seconds=2,
     value_up=1,
@@ -13,18 +13,20 @@ def find_same(
     """
     First implementation, ported from the jupyter run analysis notebooks (AG).
 
-    It returns a dict of timestamps, to detials for every time the base PV changes value_up->value_down. The details
-    contain the info what other PV (part of data) goes along, how long takes value_down -> value up etc.
+    It returns a dict of timestamps to detail for every timestamp the BASE PV changes its value from value_up->value_down.
+    The details contain the info where AGAINST PV (all part of data object) changes along (same change value_up>down),
+    how long it stays until the BASE value_down -> value_up etc, is it considered by common etc.
 
-    :param value_up:
-    :param value_down:
-    :param data:
-    :param base:
-    :param against:
-    :param margin_seconds:
-    :param verbose:
-    :return:
+    :param base: the PV to be treated as the baseline, i.e. as the one that's evolution will trigger the comparison with the others
+    :param against: the PV that should be checked after baseline has its change
+    :param value_up: value considered to be high, default 1,
+    :param value_down: value considered to be low, default 0,
+    :param data: the pychiver.get(manyPVs) dict -> DataFrame,
+    :param margin_seconds: the margin in withing the change is considered te same, default 2s
+    :return: dict of timestamps to detail object (dict)
     """
+    if base is None or against is None:
+        raise ValueError('One needs to specify both the BASE and AGAINST PV')
     tmpResult = {}
     tempDFa = data[base]
     tempDFc = data[against]
