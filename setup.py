@@ -20,6 +20,7 @@ setuptools.setup(
         "matplotlib",
         "numpy",
         "pyepics",
+        "python-gitlab",
         #          'epicsarchiver'
     ],
     packages=setuptools.find_packages(),

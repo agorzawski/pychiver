@@ -3,23 +3,27 @@ ESS 2021
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
     E.Laface    <emmanuele.laface@ess.eu>
+    B.Bolling   <benjamin.bolling@ess.eu>
 """
 import datetime
 from dateutil import tz
 import warnings
+
+warnings.formatwarning = lambda msg, *args, **kwargs: f"{msg}\n"  # Monkey-patching to remove line of source code
 from json import JSONDecodeError
 
 from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
 from .domain import PVMetaInfo
 from .calculations import Calculation, CalculationMode
-from .instances import DEFAULT_MAX_EXTRACTION_SIZE
+from .instances import DEFAULT_MAX_EXTRACTION_SIZE, DEFAULT_ARCHIVER_CONF, DEFAULT_ARCHIVER_URL
 from . import config
 
 from enum import Enum
 import pandas
 import json
 import requests
+import gitlab
 
 
 class EndPoint:
@@ -246,9 +250,10 @@ class JsonEndPointArchiver(EndPoint):
             entries += i["val"]
         return int(entries)
 
-    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS) -> dict:
+    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS, git_config_id=DEFAULT_ARCHIVER_CONF) -> dict:
         """
         :param info_type:
+        :param git_config_id:
         :param PV:
         :return:
         """
@@ -262,6 +267,18 @@ class JsonEndPointArchiver(EndPoint):
         status = {statusItem["pvName"]: statusItem for statusItem in status}
         if info_type == PVMetaInfo.STATUS:
             returnData = status
+        elif info_type == PVMetaInfo.CONFIGURATION:
+            warnings.warn("Warning: This may take some time, as all archive files will be scanned.")
+            returnData = {}
+            p = gitlab.Gitlab(DEFAULT_ARCHIVER_URL).projects.get(git_config_id)
+            for pv in PV:
+                returnData[pv] = {}
+            for id, fn in [(f["id"], f["name"]) for f in p.repository_tree(path="files", get_all=True) if f["name"].endswith(".archive")]:
+                all_pvs = [pv for pv in p.repository_raw_blob(id).decode().split("\n") if not pv.startswith("#") and not len(pv) == 0]
+                for pv_in in returnData.keys():
+                    if all_pvs.count(pv_in) > 0:
+                        returnData[pv_in][fn] = all_pvs.count(pv_in)
+
         else:
             returnData = {}
             for onePV in PV:

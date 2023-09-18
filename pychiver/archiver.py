@@ -24,6 +24,7 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
     E.Laface    <emmanuele.laface@ess.eu>
+    B.Bolling   <benjamin.bolling@ess.eu>
 """
 
 import os
@@ -355,14 +356,16 @@ class Archiver:
         # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
-    def check(self, PV: str, info_type=PVMetaInfo.STATUS) -> dict:
+    def check(self, PV: str, info_type=PVMetaInfo.STATUS, git_config_id=None) -> dict:
         """
         Provides information on the requested PV(s)
         :param info_type: STATUS (default) returns info on PVs, INFO returns info on a given PVs
+        :param git_config_id: DEFAULT_ARCHIVER_CONF (default) returns info on which Archiver Configuration
+                           files a set of PVs are found within for different URLs and how many times
         :param PV: PVs to check status or info
         :return: dict of PV to its data
         """
-        return self.archiver.getPVStatus(PV, info_type=info_type)
+        return self.archiver.getPVStatus(PV, info_type=info_type, git_config_id=git_config_id)
 
     def _get(
         self,
