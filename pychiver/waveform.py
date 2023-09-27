@@ -135,7 +135,9 @@ class CommonRealTimeWaveformCollector(WaveformCollector):
         self._dataframe = self._dataframe[0:0]
 
     def _append(self, time, val, secs, secs_nanos):
-        self._dataframe = self._dataframe.append({"time": time, "val": val, "secs": secs, "secs_nanos": secs_nanos}, ignore_index=True)
+        self._dataframe = pandas.concat(
+            [self._dataframe, pandas.DataFrame([{"time": time, "val": val, "secs": secs, "secs_nanos": secs_nanos}])], ignore_index=True
+        )
 
     def _update_buffer_and_call_callback(self, now):
         # drop older than collector's buffer

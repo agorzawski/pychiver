@@ -19,7 +19,7 @@ def printVerbose(*args):
     TODO: This print can then optionally be redirected to log file or something..
     """
     if _getVerbose():
-        print(*args)
+        print("[pychiverLog] ", *args)
 
 
 def setVerbose(verbose=True):

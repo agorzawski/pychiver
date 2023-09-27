@@ -6,3 +6,4 @@ class PVMetaInfo(Enum):
     INFO = 0
     STATUS = 1
     DETAILS = 2
+    CONFIGURATION = 3

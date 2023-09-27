@@ -24,6 +24,7 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
     E.Laface    <emmanuele.laface@ess.eu>
+    B.Bolling   <benjamin.bolling@ess.eu>
 """
 
 import os
@@ -33,12 +34,13 @@ from typing import Tuple
 import numpy
 from pandas import DataFrame
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge
+from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge, Calculation, CalculationMode
 from .domain import PVMetaInfo
 from .endpoints import JsonEndPointArchiver
 from . import config
 from .instances import DEFAULT_ARCHIVER, DEFAULT_MAX_EXTRACTION_SIZE
 from .timeutils import getDateTimeObj
+from .analysis import find_same
 
 
 class Archiver:
@@ -70,6 +72,8 @@ class Archiver:
         force_non_archived=False,
         max_number_of_hours_back=24,
         data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+        calc=Calculation.NTH,
+        calc_mode=CalculationMode.TOTAL,
     ):
         """
         Returns the archiver data for one or many pvs within the given start_date and end_date.
@@ -79,6 +83,10 @@ class Archiver:
         :param start_date:
         :param end_date: default None => now()
         :param entries_limit: default None, ie. all entries are extracted
+        :param calc: default cluster-side calculation applied for the extracted data, default=NTH ->
+         only decimation coming from the entries_limit
+        :param calc_mode: default is calculation over all time span, other option is BINNED, together with
+         entries_limit returns binned calculation
         :param max_number_of_hours_back: default 24, specifies for how many hours back archiver should be asked
                             if no data is found in between the start and end date
         :param force_non_archived: default False, when True, an attempt to extract archived data is made,
@@ -105,6 +113,8 @@ class Archiver:
                     entries_limit=e_limit,
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
+                    calc=calc,
+                    calc_mode=calc_mode,
                     data_extraction_limit=data_extraction_limit,
                 )[0]
             return dataToReturn
@@ -120,8 +130,17 @@ class Archiver:
                     force_non_archived=force_non_archived,
                     max_number_of_hours_back=max_number_of_hours_back,
                     data_extraction_limit=data_extraction_limit,
+                    calc=calc,
+                    calc_mode=calc_mode,
                 )[0]
             }
+
+    def getAtTime(self, PVs: list, time: None) -> DataFrame:
+        # TODO support finding PVs at one time, returns simple data frame with
+        #  PV as a key / time (requested) / time (closes to requested)/ value
+        # TODO may need InterpolationStrategy in the parameter -> see getAligned with externally provided timebase
+        # TODO see with compare()
+        raise NotImplementedError("Not implemented yet")
 
     def getWaveform(
         self, onePV: str, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24, data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE
@@ -271,6 +290,62 @@ class Archiver:
         closeTimeStamps = findCloseTimestamps(dfs, tolerance_in_seconds=tolerance_in_seconds, edge_to_use=compare_edge)
         return closeTimeStamps
 
+    def compareSameOccurrences(
+        self,
+        basePV,
+        PVsToCheck,
+        start_date,
+        end_date=None,
+        margin_seconds=1,
+        value_down=0,
+        value_up=1,
+        entries_limit=None,
+        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+    ) -> DataFrame:
+        """
+        Returns a DataFrame, with the timestamps, correlation and the base PV being off (duration). The check is done
+        the following: for every value == value_down of the base, the time series (withing the given times +/- margin) is checked,
+        if there is a change ( from value_up=> value down) this occurrence is marked as common, and the time until
+        the base recovers to value_up is counted as duration.
+
+        This functionality can give unfiltered data with correlations of what brought what systems.
+
+        :param basePV: a PV to look for the individual changes from value_up -> value_down,
+        :param PVsToCheck: pvs to check if at the basePV timestamps, the same change (value_up->down) is happening withing the margin_seconds,
+        :param margin_seconds: default 1s, margin to find 'same occurrence',
+        :param value_up: value consider as 'normal', default 1,
+        :param value_down: vale considered as 'down'/'off', default 0,
+        :param start_date: start date of the time window,
+        :param end_date: end date of the time window,
+        :param entries_limit:
+        :param data_extraction_limit:
+        :return:
+        """
+        allPvs = [basePV]
+        for onePV in PVsToCheck:
+            allPvs.append(onePV)
+        data = self.get(
+            allPvs,
+            start_date=start_date,
+            end_date=end_date,
+            entries_limit=entries_limit,
+            max_number_of_hours_back=0,
+            data_extraction_limit=data_extraction_limit,
+        )
+        result = {}
+        for onePV in PVsToCheck:
+            a = find_same(data, base=basePV, against=onePV, margin_seconds=margin_seconds, value_up=value_up, value_down=value_down)
+            result[onePV] = a
+        dataAll = {"input": [], "timestamp": [], "duration": []}
+        for onePV in PVsToCheck:
+            for one in result[onePV].values():
+                if one["common"]:
+                    dataAll["input"].append(onePV)
+                    dataAll["timestamp"].append(one["start"])
+                    dataAll["duration"].append(one["duration"])
+
+        return DataFrame.from_dict(dataAll)
+
     def getPulseData(self, cycle_id: int) -> DataFrame:
         """
         Returns data associated with the PulseId
@@ -281,14 +356,16 @@ class Archiver:
         # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
-    def check(self, PV: str, info_type=PVMetaInfo.STATUS) -> dict:
+    def check(self, PV: str, info_type=PVMetaInfo.STATUS, git_config_id=None) -> dict:
         """
         Provides information on the requested PV(s)
         :param info_type: STATUS (default) returns info on PVs, INFO returns info on a given PVs
+        :param git_config_id: DEFAULT_ARCHIVER_CONF (default) returns info on which Archiver Configuration
+                           files a set of PVs are found within for different URLs and how many times
         :param PV: PVs to check status or info
         :return: dict of PV to its data
         """
-        return self.archiver.getPVStatus(PV, info_type=info_type)
+        return self.archiver.getPVStatus(PV, info_type=info_type, git_config_id=git_config_id)
 
     def _get(
         self,
@@ -299,6 +376,8 @@ class Archiver:
         waveform_alert=True,
         force_non_archived=False,
         max_number_of_hours_back=24,
+        calc=Calculation.NTH,
+        calc_mode=CalculationMode.TOTAL,
         data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
     ) -> Tuple[DataFrame, bool]:
         start_date = getDateTimeObj(start_date)
@@ -321,6 +400,8 @@ class Archiver:
                 entries_limit=entries_limit,
                 max_number_of_hours_back=max_number_of_hours_back,
                 data_extraction_limit=data_extraction_limit,
+                calc=calc,
+                calc_mode=calc_mode,
             )
         try:
             if len(df) > 0 and len(df["val"][0]):
