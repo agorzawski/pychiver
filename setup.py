@@ -21,7 +21,7 @@ setuptools.setup(
         "numpy",
         "pyepics",
         "python-gitlab",
-        #          'epicsarchiver'
+        "py-epicsarchiver>=0.5",
     ],
     packages=setuptools.find_packages(),
 )

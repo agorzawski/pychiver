@@ -12,7 +12,10 @@ import warnings
 warnings.formatwarning = lambda msg, *args, **kwargs: f"{msg}\n"  # Monkey-patching to remove line of source code
 from json import JSONDecodeError
 
-from .timeutils import validateTimeStamps, validateTimeStampsReturnObjects, getDateTimeObj
+from epicsarchiver import ArchiverAppliance
+from epicsarchiver import ArchiveEvent
+
+from .timeutils import validateTimeStampsReturnObjects, getDateTimeObj
 from .codes import EpicsStatus, EpicsSeverity
 from .domain import PVMetaInfo
 from .calculations import Calculation, CalculationMode
@@ -21,7 +24,6 @@ from . import config
 
 from enum import Enum
 import pandas
-import json
 import requests
 import gitlab
 
@@ -134,16 +136,16 @@ class ExpectedDataSizeExceedsLimitError(Exception):
         )
 
 
-class JsonEndPointArchiver(EndPoint):
+class EndPointArchiver(EndPoint):
     """
-    JSON end point implementation for the ESS Archiver
+    End point implementation for the ESS Archiver
     """
 
     def __init__(self, archiver_url=None):
         super().__init__(archiver_url)
         self.archiver_url_data = "{}:17668/retrieval/data/getData.json".format(archiver_url)
         self.archiver_url_mgmt = "{}:17665/mgmt/bpl".format(archiver_url)
-        self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(self.archiver_url_data)
+        self.archiver_appliance = ArchiverAppliance(archiver_url.replace("http://", ""))
 
     def getDataForPV(
         self,
@@ -157,11 +159,11 @@ class JsonEndPointArchiver(EndPoint):
         calc_mode=CalculationMode.TOTAL,
     ) -> pandas.DataFrame:
         status_details = self.getPVStatus(PV, info_type=PVMetaInfo.DETAILS)[PV]
-        start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
+        start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         expected_data_size = (
             PVDataType.getDataSizefromStringRepr(status_details["Archiver DBR type (from typeinfo):"])
             * int(status_details["Number of elements:"])
-            * self._countEntries(PV, start_date_str, end_date_str)
+            * self._countEntries(PV, start_date, end_date)
         )
         if data_extraction_limit:
             if expected_data_size > data_extraction_limit:
@@ -170,12 +172,16 @@ class JsonEndPointArchiver(EndPoint):
             warnings.warn(f"You are extracting {expected_data_size} bytes for pv {PV} it may take a while...")
 
         try:
-            jsonReturn = self._getJSONRequest(
+            rawData = self._getRawRequest(
                 PV, start_date, end_date=end_date, entries_limit=entries_limit, iteration=max_number_of_hours_back, calc=calc, calc_mode=calc_mode
             )
             # TODO think about putting the iterative search for an earlier value up to the Archiver class
-            json_data = jsonReturn["data"]
-            dataset = pandas.read_json(json.dumps(json_data))
+            dataset = pandas.DataFrame(
+                [
+                    {"secs": event.timestamp.timestamp(), "val": event.val, "nanos": event.nanos, "severity": event.severity, "status": event.status}
+                    for event in rawData
+                ]
+            )
             if dataset.empty:
                 warnings.warn(f"Empty dataset extracted for '{PV}'")
                 return dataset
@@ -184,12 +190,11 @@ class JsonEndPointArchiver(EndPoint):
             warnings.warn("No data returned in the requested date range, returning empty dataset!")
             return self.getEmptyResult()
 
-    def _getJSONRequest(
+    def _getRawRequest(
         self, PV, start_date, end_date=None, entries_limit=5000, entries_warning_limit=5000, iteration=24, calc=Calculation.NTH, calc_mode=CalculationMode.TOTAL
-    ) -> dict:
-        start_date_str, end_date_str = validateTimeStamps(start_date, end_date)
+    ) -> list[ArchiveEvent]:
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
-        entries = self._countEntries(PV, start_date_str, end_date_str)
+        entries = self._countEntries(PV, start_date, end_date)
         if not entries:
             config.printVerbose(f"No data found for '{PV}', trying earlier than: start:{start_date} until {end_date}")
         # TODO see if the recursive call should be here
@@ -207,10 +212,10 @@ class JsonEndPointArchiver(EndPoint):
         if calc != Calculation.NTH and calc_mode == CalculationMode.BINNED:
             nth = entries_limit
 
-        toReturn = self._get_data_request(PV, start_date_str, end_date_str, calc=calc, nth=nth).json()
-        if not len(toReturn) or not len(toReturn[0].get("data", [])):
+        toReturn = self._get_data_request(PV, start_date, end_date, calc=calc, nth=nth)
+        if not len(toReturn):
             if iteration > 0:
-                return self._getJSONRequest(
+                return self._getRawRequest(
                     PV,
                     start_date=start_date - datetime.timedelta(hours=1),
                     end_date=start_date,
@@ -219,19 +224,14 @@ class JsonEndPointArchiver(EndPoint):
                 )
             else:
                 warnings.warn("No data found (in the increased time window), returning empty result.")
-                return {"data": []}
-        return toReturn[0]
+                return []
+        return toReturn
 
-    def _get_data_request(self, PV, start_date, end_date, calc=Calculation.NTH, nth=1) -> requests.request:
+    def _get_data_request(self, PV, start_date: datetime, end_date: datetime, calc=Calculation.NTH, nth=1) -> list[ArchiveEvent]:
         func = calc.value.format(nth)
-        url = self.archiver_aggregating_url.format(func, PV, start_date, end_date)
-        config.printVerbose(url)
-        res = requests.get(url)
-        if res.status_code != 200:
-            raise ValueError(f"Failed to get request: {url}, status {res.status_code}")
-        return res
+        return self.archiver_appliance.get_events(f"{func}({PV})", start_date, end_date)
 
-    def _countEntries(self, PV, start_date, end_date) -> int:
+    def _countEntries(self, PV, start_date: datetime, end_date: datetime) -> int:
         """
         Returns counted entries for the PV in a given time range.
 
@@ -241,16 +241,12 @@ class JsonEndPointArchiver(EndPoint):
         :return:
         """
         res = self._get_data_request(PV, start_date, end_date, calc=Calculation.N_COUNT)
-        if res.status_code != 200:
-            raise ValueError(f"Failed to count entries for {PV}, status {res.status_code}")
-        # print(res.json())
-        json_data = res.json()[0]["data"]
         entries = 0
-        for i in json_data:
-            entries += i["val"]
+        for i in res:
+            entries += i.val
         return int(entries)
 
-    def getPVStatus(self, PV, info_type=PVMetaInfo.STATUS, git_config_id=DEFAULT_ARCHIVER_CONF) -> dict:
+    def getPVStatus(self, PV: str | list, info_type=PVMetaInfo.STATUS, git_config_id=DEFAULT_ARCHIVER_CONF) -> dict:
         """
         :param info_type:
         :param git_config_id:
@@ -259,11 +255,7 @@ class JsonEndPointArchiver(EndPoint):
         """
         if not isinstance(info_type, PVMetaInfo):
             raise ValueError("Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo")
-        if isinstance(PV, str):
-            PV = (PV,)
-        url_to_check = f"{self.archiver_url_mgmt}/getPVStatus?pv={','.join(PV)}"
-        config.printVerbose(url_to_check)
-        status = requests.get(url_to_check).json()
+        status = self.archiver_appliance.get_pv_status(PV)
         status = {statusItem["pvName"]: statusItem for statusItem in status}
         if info_type == PVMetaInfo.STATUS:
             returnData = status
@@ -281,7 +273,10 @@ class JsonEndPointArchiver(EndPoint):
 
         else:
             returnData = {}
-            for onePV in PV:
+            pvs = PV
+            if isinstance(PV, str):
+                pvs = [PV]
+            for onePV in pvs:
                 if "Not" in status[onePV]["status"]:
                     returnData[onePV] = status[onePV]
                 else:

@@ -7,11 +7,10 @@ include:
 
 unittest:
   stage: test
-  image: "python:3.7"
+  image: "python:3.10"
   script:
     - python --version
-    # - pip install -r requirements.txt
-    - pip install .
+    - pip install . --index-url https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
     - pip install coverage pytest
     - pytest --junitxml=report.xml
     - coverage run -m unittest -v
