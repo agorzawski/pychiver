@@ -1,5 +1,5 @@
 install:
-	pip install --editable . --user
+	pip install --editable . --user --index-url https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
 
 uninstall:
 	pip uninstall esslogbook
