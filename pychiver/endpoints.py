@@ -65,7 +65,7 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
         dataset["status_label"] = dataset.apply(lambda row: EpicsStatus(row["status"]), axis=1)
         dataset["severity_label"] = dataset.apply(lambda row: EpicsSeverity(row["severity"]), axis=1)
         dataset["secs_nanos"] = dataset["secs"] + dataset["nanos"] / 1e9
-        dataset["time"] = pandas.to_datetime(dataset["secs_nanos"], unit="s")
+        dataset["time"] = dataset.apply(lambda row: pandas.Timestamp(row['secs'] * int(1e9) + row['nanos'], tz=tz.UTC), axis=1)
         dataset["time_dt"] = dataset.apply(lambda row: datetime.datetime.utcfromtimestamp(row["secs_nanos"]).replace(tzinfo=tz.UTC), axis=1)
 
     if len(dataset) < 2:
