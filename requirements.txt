@@ -4,3 +4,4 @@ matplotlib
 numpy
 pyepics
 python-gitlab
+py-epicsarchiver>=0.5
