@@ -243,5 +243,10 @@ class ArchiverWaveformCollector(WaveformCollector):
 
     def _fetch_values(self, PV, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24):
         return self._archiver.getWaveform(
-            PV, start_date=start_date, end_date=end_date, force_non_archived=force_non_archived, max_number_of_hours_back=max_number_of_hours_back
+            PV,
+            start_date=start_date,
+            end_date=end_date,
+            force_non_archived=force_non_archived,
+            max_number_of_hours_back=max_number_of_hours_back,
+            data_extraction_limit=None,
         )
