@@ -34,13 +34,14 @@ from typing import Tuple
 import numpy
 from pandas import DataFrame
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge, Calculation, CalculationMode
+from .calculations import LinearInterpolationStrategy, alignDataFrames,calculateMovingAverage, findCloseTimestamps, Edge, Calculation, CalculationMode
 from .domain import PVMetaInfo
 from .endpoints import EndPointArchiver
 from . import config
 from .instances import DEFAULT_ARCHIVER, DEFAULT_MAX_EXTRACTION_SIZE
 from .timeutils import getDateTimeObj
 from .analysis import find_same
+import sys
 
 
 class Archiver:
@@ -169,17 +170,17 @@ class Archiver:
         )[0]
 
     def getAligned(
-        self,
-        PVS: list,
-        start_date,
-        end_date=None,
-        time_base=None,
-        strategy=LinearInterpolationStrategy,
-        entries_limit=None,
-        time_column="secs_nanos",
-        value_columns=("val",),
-        force_non_archived=False,
-        data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
+            self,
+            PVS: list,
+            start_date,
+            end_date=None,
+            time_base=None,
+            strategy: list = None,
+            entries_limit=None,
+            time_column="secs_nanos",
+            value_columns=("val",),
+            force_non_archived=False,
+            data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
     ) -> DataFrame:
         """
         Extracts PVs and aligns them to the timestamps of the first PV in the list or separately provided time base.
@@ -191,7 +192,8 @@ class Archiver:
         :param end_date: end date
         :param time_base: New time base to use, default None, then first PV timestamps' in the set is used.
                             If new provided, use epoch seconds.
-        :param strategy: Interpolation strategy to be used for the aligning, default LinearInterpolationStrategy
+        :param strategy: List of interpolation strategies to be used for aligning. The first PV in PVS will be aligned
+                         with the first interpolation strategy in strategy list. Default is a list  of LinearInterpolationStrategy.
         :param entries_limit: optional, default None, should be either a single None or a tuple of limits per requested PV
         :param time_column: optional, default 'time' column will be used
         :param value_columns: optional, default 'val' column will be used,
@@ -202,16 +204,23 @@ class Archiver:
         :return: a DataFrame with all PVS and their values
         """
         dict_of_dataframes = self.get(
-            PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+            PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived,
+            data_extraction_limit=data_extraction_limit
         )
+
         if not isinstance(dict_of_dataframes, dict):
-            raise ValueError("Wrong data format provided. Dict of pandas.DataFrames expected, {} provided".format(dict_of_dataframes.__class__))
+            raise ValueError("Wrong data format provided. Dict of pandas.DataFrames expected, {} provided".format(
+                dict_of_dataframes.__class__))
+
+        if not strategy:
+            strategy = [LinearInterpolationStrategy]*len(dict_of_dataframes.keys())
+
         return alignDataFrames(
-            dict_of_dataframes,
-            time_base=time_base,
-            time_column=time_column,
-            value_columns=value_columns,
-            InterpolationStrategyImpl=strategy,
+               dict_of_dataframes,
+               time_base=time_base,
+               time_column=time_column,
+               value_columns=value_columns,
+               InterpolationStrategyImpl=strategy,
         )
 
     def getMovingAverage(
