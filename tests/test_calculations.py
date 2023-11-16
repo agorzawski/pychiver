@@ -1,7 +1,8 @@
 import unittest
 import sys
 import os
-sys.path.append(os.path.abspath('..'))
+
+sys.path.append(os.path.abspath(".."))
 from pychiver.calculations import *
 
 SIMPLE_TIMES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -31,13 +32,7 @@ DF_2_VAL_FOR_DF_1_TIME = [
     6.0,
 ]
 
-DF_2_VAL_FOR_DF_1_TIME_INTER_LAST = [
-    2.0,
-    2.0,
-    5.0,
-    8.0,
-    6.0
-]
+DF_2_VAL_FOR_DF_1_TIME_INTER_LAST = [2.0, 2.0, 5.0, 8.0, 6.0]
 
 
 EXTERNAL_TIME_BASE = [1.1, 1.2, 1.3, 2.4, 3.5, 3.7, 4.2]
@@ -121,13 +116,13 @@ class TestDataAlign(unittest.TestCase):
 
     def test_wrong_init_mismatch_unique_PVS_and_interpolation_strategies(self):
         with self.assertRaises(ValueError):
-            alignDataFrames({"PV1": DF_1, "PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[InterpolationStrategy]*3)
+            alignDataFrames({"PV1": DF_1, "PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[InterpolationStrategy] * 3)
 
         with self.assertRaises(ValueError):
-            alignDataFrames({"PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[InterpolationStrategy]*3)
+            alignDataFrames({"PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[InterpolationStrategy] * 3)
 
         with self.assertRaises(ValueError):
-            alignDataFrames({"PV1": DF_1, "PV2": DF_2, "PV3": DF_3}, InterpolationStrategyImpl=[InterpolationStrategy]*2)
+            alignDataFrames({"PV1": DF_1, "PV2": DF_2, "PV3": DF_3}, InterpolationStrategyImpl=[InterpolationStrategy] * 2)
 
     def test_wrong_init_wrong_amount_dfs(self):
         with self.assertRaises(ValueError):
@@ -135,18 +130,16 @@ class TestDataAlign(unittest.TestCase):
 
     def test_wrong_init_wrong_columns_in_df(self):
         with self.assertRaises(ValueError):
-            alignDataFrames({"PV1": DF_1, "PV2": DF_RAND_COLUMNS}, InterpolationStrategyImpl=[InterpolationStrategy]*2)
+            alignDataFrames({"PV1": DF_1, "PV2": DF_RAND_COLUMNS}, InterpolationStrategyImpl=[InterpolationStrategy] * 2)
 
     def test_align_with_first_df_time(self):
-        result1 = alignDataFrames({"PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[LinearInterpolationStrategy]*2)
+        result1 = alignDataFrames({"PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[LinearInterpolationStrategy] * 2)
         self._compare_two_arrays(DF_2_VAL_FOR_DF_1_TIME, result1["PV2:val"].to_numpy())
 
-        result2 = alignDataFrames({"PV1": DF_1, "PV2": DF_2},
-                                      InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy, LinearInterpolationStrategy])
+        result2 = alignDataFrames({"PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy, LinearInterpolationStrategy])
         self._compare_two_arrays(DF_2_VAL_FOR_DF_1_TIME, result2["PV2:val"].to_numpy())
 
-        result3 = alignDataFrames({"PV1": DF_1, "PV2": DF_2},
-                                      InterpolationStrategyImpl=[LinearInterpolationStrategy, LastAcquiredValueInterpolationStrategy])
+        result3 = alignDataFrames({"PV1": DF_1, "PV2": DF_2}, InterpolationStrategyImpl=[LinearInterpolationStrategy, LastAcquiredValueInterpolationStrategy])
         self._compare_two_arrays(DF_2_VAL_FOR_DF_1_TIME_INTER_LAST, result3["PV2:val"].to_numpy())
 
     def test_align_with_external_time_base(self):
@@ -154,7 +147,7 @@ class TestDataAlign(unittest.TestCase):
             {"PV1": DF_1, "PV2": DF_2},
             time_base=EXTERNAL_TIME_BASE,
             value_columns=("val", "some_other"),
-            InterpolationStrategyImpl=[LinearInterpolationStrategy]*2
+            InterpolationStrategyImpl=[LinearInterpolationStrategy] * 2,
         )
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE, result1["PV1:val"].to_numpy())
         self._compare_two_arrays(DF_2_VAL_FOR_EXTERNAL_TIME_BASE, result1["PV2:val"].to_numpy())
@@ -163,7 +156,7 @@ class TestDataAlign(unittest.TestCase):
             {"PV1": DF_1, "PV2": DF_2},
             time_base=EXTERNAL_TIME_BASE,
             value_columns=("val", "some_other"),
-            InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy] * 2
+            InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy] * 2,
         )
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE_LAST, result2["PV1:val"].to_numpy())
         self._compare_two_arrays(DF_2_VAL_FOR_EXTERNAL_TIME_BASE_LAST, result2["PV2:val"].to_numpy())
@@ -172,7 +165,7 @@ class TestDataAlign(unittest.TestCase):
             {"PV1": DF_1, "PV2": DF_2},
             time_base=EXTERNAL_TIME_BASE,
             value_columns=("val", "some_other"),
-            InterpolationStrategyImpl=[LinearInterpolationStrategy, LastAcquiredValueInterpolationStrategy]
+            InterpolationStrategyImpl=[LinearInterpolationStrategy, LastAcquiredValueInterpolationStrategy],
         )
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE, result3["PV1:val"].to_numpy())
         self._compare_two_arrays(DF_2_VAL_FOR_EXTERNAL_TIME_BASE_LAST, result3["PV2:val"].to_numpy())
@@ -181,25 +174,19 @@ class TestDataAlign(unittest.TestCase):
             {"PV1": DF_1, "PV2": DF_2},
             time_base=EXTERNAL_TIME_BASE,
             value_columns=("val", "some_other"),
-            InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy, LinearInterpolationStrategy]
+            InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy, LinearInterpolationStrategy],
         )
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE_LAST, result4["PV1:val"].to_numpy())
         self._compare_two_arrays(DF_2_VAL_FOR_EXTERNAL_TIME_BASE, result4["PV2:val"].to_numpy())
 
     def test_align_one_df_with_external_time_base(self):
         result1 = alignDataFrames(
-            {"PV1": DF_1},
-            time_base=EXTERNAL_TIME_BASE,
-            value_columns=("val", "some_other"),
-            InterpolationStrategyImpl=[LinearInterpolationStrategy]
+            {"PV1": DF_1}, time_base=EXTERNAL_TIME_BASE, value_columns=("val", "some_other"), InterpolationStrategyImpl=[LinearInterpolationStrategy]
         )
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE, result1["PV1:val"].to_numpy())
 
         result2 = alignDataFrames(
-            {"PV1": DF_1},
-            time_base=EXTERNAL_TIME_BASE,
-            value_columns=("val", "some_other"),
-            InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy]
+            {"PV1": DF_1}, time_base=EXTERNAL_TIME_BASE, value_columns=("val", "some_other"), InterpolationStrategyImpl=[LastAcquiredValueInterpolationStrategy]
         )
         self._compare_two_arrays(DF_1_VAL_FOR_EXTERNAL_TIME_BASE_LAST, result2["PV1:val"].to_numpy())
 

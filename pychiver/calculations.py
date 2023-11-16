@@ -129,7 +129,6 @@ def alignDataFrames(dict_of_datasets, time_base=None, InterpolationStrategyImpl=
     return returnDF
 
 
-
 def calculateMovingAverage(dataset, window=10, time_column="secs_nanos", value_columns=("val",)):
     """
     Modifies the the provided data set, by adding extra columns for mean time and mean values.
