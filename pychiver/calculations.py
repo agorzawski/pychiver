@@ -63,16 +63,18 @@ def alignDataFrames(dict_of_datasets, time_base=None, InterpolationStrategyImpl=
 
     :param dict_of_datasets:
     :param time_base: default None,
-    :param InterpolationStrategyImpl:
+    :param InterpolationStrategyImpl: list of interpolation strategies. The first PV in dict_of_datasets will be aligned
+                                      with the first interpolation strategy in InterpolationStrategyImpl.
     :param time_column: default 'time'
     :param value_columns: default 'val'
     :return: pandas DataFrame with one time column and value columns for each data label
     """
-    if InterpolationStrategyImpl is None:
-        raise ValueError("Cannot align data sets without a valid InterpolationStrategy")
 
     if not isinstance(dict_of_datasets, dict):
         raise ValueError("Provided data sets should be in dict, ie. {'PV1':df_1,'PV2':df_2,}")
+
+    if not isinstance(InterpolationStrategyImpl, list) or len(dict_of_datasets.keys()) != len(InterpolationStrategyImpl):
+        raise ValueError("Strategy should be a list of the same length as the number of unique PVs")
 
     numberOfValidDfs = 0
     dfToSkip = []
@@ -103,20 +105,20 @@ def alignDataFrames(dict_of_datasets, time_base=None, InterpolationStrategyImpl=
     firstPV = list(dict_of_datasets.keys())[0]
 
     if time_base is None:
-        isImpl = InterpolationStrategyImpl(dict_of_datasets[firstPV][time_column].to_numpy())
+        isImpl = [interpol(dict_of_datasets[firstPV][time_column].to_numpy()) for interpol in InterpolationStrategyImpl]
         newDF_values.append(dict_of_datasets[firstPV][time_column].to_numpy())
         config.printVerbose("First PV used as a time base: ", firstPV)
     else:
-        isImpl = InterpolationStrategyImpl(time_base)
+        isImpl = [interpol(time_base) for interpol in InterpolationStrategyImpl]
         newDF_values.append(time_base)
         config.printVerbose("External time base used.")
 
-    for one_PV in dict_of_datasets.keys():
+    for index, one_PV in enumerate(dict_of_datasets.keys()):
         if one_PV in dfToSkip:
             continue
         for one_val_column in value_columns:
             config.printVerbose(f"Interpolating for {one_PV}:{one_val_column}")
-            x = isImpl.getValues(dict_of_datasets[one_PV][time_column].to_numpy(), dict_of_datasets[one_PV][one_val_column].to_numpy())
+            x = isImpl[index].getValues(dict_of_datasets[one_PV][time_column].to_numpy(), dict_of_datasets[one_PV][one_val_column].to_numpy())
             newDF_values.append(x)
     config.printVerbose("Alignment completed!")
 

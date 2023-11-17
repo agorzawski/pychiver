@@ -34,7 +34,16 @@ from typing import Tuple
 import numpy
 from pandas import DataFrame
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge, Calculation, CalculationMode
+from .calculations import (
+    InterpolationStrategy,
+    LinearInterpolationStrategy,
+    alignDataFrames,
+    calculateMovingAverage,
+    findCloseTimestamps,
+    Edge,
+    Calculation,
+    CalculationMode,
+)
 from .domain import PVMetaInfo
 from .endpoints import EndPointArchiver
 from . import config
@@ -174,7 +183,7 @@ class Archiver:
         start_date,
         end_date=None,
         time_base=None,
-        strategy=LinearInterpolationStrategy,
+        strategy: list | InterpolationStrategy = None,
         entries_limit=None,
         time_column="secs_nanos",
         value_columns=("val",),
@@ -188,10 +197,12 @@ class Archiver:
 
         :param PVS: list of PVS (string) to be extracted
         :param start_date: start date,
-        :param end_date: end date
+        :param end_date: end date, default is now()
         :param time_base: New time base to use, default None, then first PV timestamps' in the set is used.
-                            If new provided, use epoch seconds.
-        :param strategy: Interpolation strategy to be used for the aligning, default LinearInterpolationStrategy
+                            If new time base provided, use epoch seconds.
+        :param strategy: List of interpolation strategies to be used for aligning. The first PV in PVS will be aligned
+                         with the corresponding interpolation strategy in the strategy list.
+                         The default is None, and that translates to a list of LinearInterpolationStrategy.
         :param entries_limit: optional, default None, should be either a single None or a tuple of limits per requested PV
         :param time_column: optional, default 'time' column will be used
         :param value_columns: optional, default 'val' column will be used,
@@ -204,8 +215,13 @@ class Archiver:
         dict_of_dataframes = self.get(
             PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
         )
+
         if not isinstance(dict_of_dataframes, dict):
             raise ValueError("Wrong data format provided. Dict of pandas.DataFrames expected, {} provided".format(dict_of_dataframes.__class__))
+
+        if not strategy:
+            strategy = [LinearInterpolationStrategy] * len(dict_of_dataframes.keys())
+
         return alignDataFrames(
             dict_of_dataframes,
             time_base=time_base,
