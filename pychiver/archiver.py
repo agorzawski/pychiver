@@ -34,7 +34,16 @@ from typing import Tuple
 import numpy
 from pandas import DataFrame
 
-from .calculations import LinearInterpolationStrategy, alignDataFrames, calculateMovingAverage, findCloseTimestamps, Edge, Calculation, CalculationMode
+from .calculations import (
+    InterpolationStrategy,
+    LinearInterpolationStrategy,
+    alignDataFrames,
+    calculateMovingAverage,
+    findCloseTimestamps,
+    Edge,
+    Calculation,
+    CalculationMode,
+)
 from .domain import PVMetaInfo
 from .endpoints import EndPointArchiver
 from . import config
@@ -174,7 +183,7 @@ class Archiver:
         start_date,
         end_date=None,
         time_base=None,
-        strategy: list = None,
+        strategy: list | InterpolationStrategy = None,
         entries_limit=None,
         time_column="secs_nanos",
         value_columns=("val",),
@@ -188,11 +197,12 @@ class Archiver:
 
         :param PVS: list of PVS (string) to be extracted
         :param start_date: start date,
-        :param end_date: end date
+        :param end_date: end date, default is now()
         :param time_base: New time base to use, default None, then first PV timestamps' in the set is used.
-                            If new provided, use epoch seconds.
+                            If new time base provided, use epoch seconds.
         :param strategy: List of interpolation strategies to be used for aligning. The first PV in PVS will be aligned
-                         with the first interpolation strategy in strategy list. Default is a list  of LinearInterpolationStrategy.
+                         with the corresponding interpolation strategy in the strategy list.
+                         The default is None, and that translates to a list of LinearInterpolationStrategy.
         :param entries_limit: optional, default None, should be either a single None or a tuple of limits per requested PV
         :param time_column: optional, default 'time' column will be used
         :param value_columns: optional, default 'val' column will be used,

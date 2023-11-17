@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 
 from . import config
-import sys
 
 
 class InterpolationStrategy:
@@ -75,7 +74,6 @@ def alignDataFrames(dict_of_datasets, time_base=None, InterpolationStrategyImpl=
         raise ValueError("Provided data sets should be in dict, ie. {'PV1':df_1,'PV2':df_2,}")
 
     if not isinstance(InterpolationStrategyImpl, list) or len(dict_of_datasets.keys()) != len(InterpolationStrategyImpl):
-        sys.tracebacklimit = 0
         raise ValueError("Strategy should be a list of the same length as the number of unique PVs")
 
     numberOfValidDfs = 0

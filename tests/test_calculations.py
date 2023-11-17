@@ -1,9 +1,10 @@
 import unittest
 import sys
 import os
+from pychiver.calculations import *
 
 sys.path.append(os.path.abspath(".."))
-from pychiver.calculations import *
+sys.tracebacklimit = 0
 
 SIMPLE_TIMES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 SIMPLE_VALUES = [i * i for i in SIMPLE_TIMES]
