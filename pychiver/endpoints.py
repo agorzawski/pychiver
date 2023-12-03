@@ -255,8 +255,10 @@ class EndPointArchiver(EndPoint):
         """
         if not isinstance(info_type, PVMetaInfo):
             raise ValueError("Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo")
-        status = self.archiver_appliance.get_pv_status(PV)
-        status = {statusItem["pvName"]: statusItem for statusItem in status}
+
+        if isinstance(PV, str):
+            PV = [PV]
+        status = {PV1: self.archiver_appliance.get_pv_status(PV1)[0] for PV1 in PV}
         if info_type == PVMetaInfo.STATUS:
             returnData = status
         elif info_type == PVMetaInfo.CONFIGURATION:
@@ -274,8 +276,6 @@ class EndPointArchiver(EndPoint):
         else:
             returnData = {}
             pvs = PV
-            if isinstance(PV, str):
-                pvs = [PV]
             for onePV in pvs:
                 if "Not" in status[onePV]["status"]:
                     returnData[onePV] = status[onePV]
