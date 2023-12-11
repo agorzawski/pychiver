@@ -214,7 +214,13 @@ class Archiver:
         :return: a DataFrame with all PVS and their values
         """
         dict_of_dataframes = self.get(
-            PVS, start_date, end_date=end_date, entries_limit=entries_limit, max_number_of_hours_back=max_number_of_hours_back, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+            PVS,
+            start_date,
+            end_date=end_date,
+            entries_limit=entries_limit,
+            max_number_of_hours_back=max_number_of_hours_back,
+            force_non_archived=force_non_archived,
+            data_extraction_limit=data_extraction_limit,
         )
 
         if not isinstance(dict_of_dataframes, dict):
