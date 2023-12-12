@@ -132,7 +132,7 @@ class ExpectedDataSizeExceedsLimitError(Exception):
     def __str__(self):
         return (
             f"The expected datasize {self.expected_size} bytes exceeds the limit {self.limit}"
-            "bytes for pv {self.pv}. Set data_extraction_limit parameter to a higher value or None to force data extraction."
+            f"bytes for pv {self.pv}. Set data_extraction_limit parameter to a higher value or None to force data extraction."
         )
 
 
