@@ -77,7 +77,7 @@ class SARConfigPV:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or readbackPvName in the configPV")
 
     def __repr__(self):
-        return "{} / {}".format(self.snapshotItems["pvName"], self.snapshotItems.get("readbackPvName", "no readback PV"))
+        return "{} / {}".format(self.configPv["pvName"], self.configPv.get("readbackPvName", "no readback PV"))
 
 
 class SARSnapshot(SARItem):

@@ -363,8 +363,8 @@ class SaveAndRestore:
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError("For restore an SARSnapshot is required!")
         try:
-            pvsToPut = [one["configPv"]["pvName"] for one in snapshot.snapshotConfigPVs]
-            valuesToPut = [one["value"]["value"] for one in snapshot.snapshotConfigPVs]
+            pvsToPut = [one.configPv["pvName"] for one in snapshot.getConfigPVs]
+            valuesToPut = [one.value["value"] for one in snapshot.getConfigPVs]
             self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)
         except Exception:
             warnings.warn("Something went wrong. Values not set.")
