@@ -25,9 +25,6 @@ unittest:
         path: coverage.xml
       junit: report.xml
 
-variables:
-  FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR: "true"
-
 style_check:
   stage: check
   image: registry.esss.lu.se/ics-docker/pre-commit
