@@ -253,6 +253,10 @@ class EndPointArchiver(EndPoint):
         :param PV:
         :return:
         """
+        if git_config_id is None:
+            git_config_id = DEFAULT_ARCHIVER_CONF
+        if info_type is None:
+            info_type = PVMetaInfo.STATUS
         if not isinstance(info_type, PVMetaInfo):
             raise ValueError("Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo")
 
