@@ -262,7 +262,8 @@ class EndPointArchiver(EndPoint):
         if info_type == PVMetaInfo.STATUS:
             returnData = status
         elif info_type == PVMetaInfo.CONFIGURATION:
-            warnings.warn("Warning: This may take some time, as all archive files will be scanned.")
+            warnings.warn("Checking {}/{}".format(DEFAULT_ARCHIVER_URL, git_config_id))
+            warnings.warn("Warning: This may take some time, as all .archive files will be scanned.")
             returnData = {}
             p = gitlab.Gitlab(DEFAULT_ARCHIVER_URL).projects.get(git_config_id)
             for pv in PV:

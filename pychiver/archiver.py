@@ -47,7 +47,7 @@ from .calculations import (
 from .domain import PVMetaInfo
 from .endpoints import EndPointArchiver
 from . import config
-from .instances import DEFAULT_ARCHIVER, DEFAULT_MAX_EXTRACTION_SIZE
+from .instances import DEFAULT_ARCHIVER, DEFAULT_MAX_EXTRACTION_SIZE, DEFAULT_ARCHIVER_CONF
 from .timeutils import getDateTimeObj
 from .analysis import find_same
 
@@ -379,7 +379,7 @@ class Archiver:
         # TODO waveforms should go as ArchiverCollectors
         raise NotImplementedError("Not implemented yet")
 
-    def check(self, PV: str, info_type=PVMetaInfo.STATUS, git_config_id=None) -> dict:
+    def check(self, PV: str | list, info_type=PVMetaInfo.STATUS, git_config_id=DEFAULT_ARCHIVER_CONF) -> dict:
         """
         Provides information on the requested PV(s)
         :param info_type: STATUS (default) returns info on PVs, INFO returns info on a given PVs

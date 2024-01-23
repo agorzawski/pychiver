@@ -39,7 +39,7 @@ class SARItem:
         return self.name
 
     def __repr__(self):
-        return "{}/{}".format(self.name, self.uniqueId)
+        return "{} / {}".format(self.name, self.uniqueId)
 
 
 class SARFolder(SARItem):
@@ -73,11 +73,11 @@ class SARConfig(SARItem):
 class SARConfigPV:
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
-        if kwargs.get("snapshotItems", None) is None:
+        if kwargs.get("configPv", None) is None:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or readbackPvName in the configPV")
 
     def __repr__(self):
-        return "{}/{}".format(self.snapshotItems["pvName"], self.snapshotItems.get("readbackPvName", "no readback PV"))
+        return "{} / {}".format(self.configPv["pvName"], self.configPv.get("readbackPvName", "no readback PV"))
 
 
 class SARSnapshot(SARItem):
@@ -96,7 +96,7 @@ class SARSnapshot(SARItem):
             self.configPVs.append(SARConfigPV(**one))
 
     def __repr__(self):
-        base = "{}/{} ".format(self.name, self.uniqueId)
+        base = "{} / {} ".format(self.name, self.uniqueId)
         if self.properties.get("golden") == "true":
             base += " GOLDEN"
         return base
@@ -141,7 +141,7 @@ class SARVirtualSnapshot(SARItem):
             self.snapshots.append(one)
 
     def __repr__(self):
-        base = "VIRTUAL: {}/{} ".format(self.name, self.uniqueId)
+        base = "VIRTUAL: {} / {} ".format(self.name, self.uniqueId)
         return base
 
     def getSnapshots(self):
@@ -184,7 +184,7 @@ def _append_config(rowsList, one: SARConfigPV):
     secs_nanos = one.value.get("time").get("unixSec") + one.value.get("time").get("nanoSec") / 1e9
     rowsList.append(
         {
-            "pv_name": one.snapshotItems.get("pvName"),
+            "pv_name": one.configPv.get("pvName"),
             "timestamp": pd.to_datetime(secs_nanos, unit="s"),
             "secs_nanos": secs_nanos,
             "status_label": one.value.get("alarm").get("status"),  # TODO use EpicsStatus codes.py
