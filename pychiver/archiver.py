@@ -188,6 +188,7 @@ class Archiver:
         time_column="secs_nanos",
         value_columns=("val",),
         force_non_archived=False,
+        max_number_of_hours_back=24,
         data_extraction_limit=DEFAULT_MAX_EXTRACTION_SIZE,
     ) -> DataFrame:
         """
@@ -213,7 +214,13 @@ class Archiver:
         :return: a DataFrame with all PVS and their values
         """
         dict_of_dataframes = self.get(
-            PVS, start_date, end_date=end_date, entries_limit=entries_limit, force_non_archived=force_non_archived, data_extraction_limit=data_extraction_limit
+            PVS,
+            start_date,
+            end_date=end_date,
+            entries_limit=entries_limit,
+            max_number_of_hours_back=max_number_of_hours_back,
+            force_non_archived=force_non_archived,
+            data_extraction_limit=data_extraction_limit,
         )
 
         if not isinstance(dict_of_dataframes, dict):
