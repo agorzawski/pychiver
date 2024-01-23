@@ -253,10 +253,6 @@ class EndPointArchiver(EndPoint):
         :param PV:
         :return:
         """
-        if git_config_id is None:
-            git_config_id = DEFAULT_ARCHIVER_CONF
-        if info_type is None:
-            info_type = PVMetaInfo.STATUS
         if not isinstance(info_type, PVMetaInfo):
             raise ValueError("Type parameter of the wrong class! Use pychiver.domain.PVMetaInfo")
 
@@ -266,7 +262,8 @@ class EndPointArchiver(EndPoint):
         if info_type == PVMetaInfo.STATUS:
             returnData = status
         elif info_type == PVMetaInfo.CONFIGURATION:
-            warnings.warn("Warning: This may take some time, as all archive files will be scanned.")
+            warnings.warn("Checking {}/{}".format(DEFAULT_ARCHIVER_URL, git_config_id))
+            warnings.warn("Warning: This may take some time, as all .archive files will be scanned.")
             returnData = {}
             p = gitlab.Gitlab(DEFAULT_ARCHIVER_URL).projects.get(git_config_id)
             for pv in PV:
