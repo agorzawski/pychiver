@@ -256,3 +256,14 @@ def _append_config(rowsList, one: SARSnapshotItem):
             "stored_value": one.value.get("value"),
         }
     )
+
+
+def _prep_snapshot_item(configPv, pvValue, unixSec, nanoSec=0):
+    return {
+        "configPv": configPv,
+        "value": {
+            "value": pvValue,
+            "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+            "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
+        },
+    }
