@@ -24,6 +24,8 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+import json
+import pandas
 import math
 from json import JSONDecodeError
 
@@ -32,6 +34,9 @@ from .archiver import Archiver
 from .timeutils import getDateTimeObj
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.auth import HTTPBasicAuth
+from requests.packages.urllib3.util.retry import Retry
 import epics
 import os
 import uuid
@@ -67,22 +72,46 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.service_url_root = "{}/root".format(self.service_url)  # deprecated
 
         self.url_node = "{}/node/{{}}".format(self.service_url)
+        self.url_node_put = "{}/node?parentNodeId={{}}".format(self.service_url)
         self.url_child = "{}/node/{{}}/children".format(self.service_url)
         self.url_parent = "{}/node/{{}}/parent".format(self.service_url)
         self.url_snapshot = "{}/snapshot/{{}}".format(self.service_url)
+        self.url_snapshot_put = "{}/snapshot?parentNodeId={{}}".format(self.service_url)
         self.url_config = "{}/config/{{}}".format(self.service_url)
+        self.url_config_put = "{}/config?parentNodeId={{}}".format(self.service_url)
         self.url_snapshots = "{}/snapshots".format(self.service_url)
         self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
+
+        self._session = requests.Session()
+        retry = Retry(connect=5, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
+        self._session.mount("https://", adapter)
+
+    def _getRequest(self, url):
+        r = self._session.get(url, verify=False)
+        if r.status_code == 200:
+            jsonContent = json.loads(r.content)
+        else:
+            raise ValueError("Bad Request: " + r.content)
+        return jsonContent
+
+    def _postRequest(self, url, payloadJson, auth=None):
+        r = self._session.post(url, files=payloadJson, auth=auth, verify=False)
+        return r
+
+    def _putRequest(self, url, payloadJson, auth=None):
+        r = self._session.put(url, json=payloadJson, auth=auth, verify=False, headers={"Content-Type": "application/json"})
+        return r
 
     def status(self):
         print(self.__dict__)
 
     def getSnapshot(self, uniqueId):
         # TODO rename that function for more generic name (getNodeDetails?)
-        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
+        json_data_Node = self._getRequest(self.url_node.format(uniqueId))
         if json_data_Node["nodeType"] == "SNAPSHOT":
-            json_data = requests.get(self.url_snapshot.format(uniqueId)).json()
+            json_data = self._getRequest(self.url_snapshot.format(uniqueId))
             # print('===== [ RAW SNAPSHOT data from the API] >>>')
             # print(json_data_Node)
             json_data["uniqueId"] = json_data_Node["uniqueId"]
@@ -95,7 +124,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         elif json_data_Node["nodeType"] == "CONFIGURATION":
             # print('===== [ RAW CONFIGURATION data from the API] >>>')
             # print(json_data_Node)
-            json_data = requests.get(self.url_config.format(uniqueId)).json()
+            json_data = self._getRequest(self.url_config.format(uniqueId))
             json_data["uniqueId"] = json_data_Node["uniqueId"]
             json_data["name"] = json_data_Node["name"]
             json_data["description"] = json_data_Node["description"]
@@ -103,39 +132,87 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         else:
             return None
 
-    def save(self, sarItem: SARItem, parentId=None):
+    def save(self, sarItem: SARItem, parentId=None, author=None):
+        # WIP following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
+
         # TODO check if item can be saved for parent
         # TODO check if item is not duplicate? (lists_pvs/ values)
-        raise NotImplementedError("Not implemented yet!")
+        auth = HTTPBasicAuth(author, "12345678abcd")
+
+        if isinstance(sarItem, SARConfig):
+            # print(self.url_config_put.format(parentId))
+            configPayload = {
+                "configurationNode": {"userName": author, "name": sarItem.getName(), "description": sarItem.description, "type": "CONFIGURATION"},
+                "configurationData": {"pvList": [{"pvName": one.pvName} for one in sarItem.configList]},
+                # TODO include additional stuff
+            }
+            # print(configPayload)
+            result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload, auth=auth)
+            sarItem.uniqueId = json.loads(result.content)["configurationNode"]["uniqueId"]
+
+        elif isinstance(sarItem, SARSnapshot):
+            # print(self.url_snapshot_put.format(parentId))
+            t = int(datetime.now().timestamp())
+            snapPayload = {
+                "snapshotNode": {
+                    "name": sarItem.getName(),
+                    "description": sarItem.description,
+                    "userName": author,
+                },
+                "snapshotData": {
+                    "snapshotItems": [
+                        {
+                            "configPv": {
+                                "pvName": o.pvName,
+                            },
+                            "value": {
+                                "type": {"name": "VDouble", "version": 1},
+                                "value": o.pvValue,
+                                "alarm": {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+                                "time": {"unixSec": t, "nanoSec": 0},
+                                "display": {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+                            },
+                        }
+                        for o in sarItem.getConfigPVs
+                    ]
+                },
+            }
+            # print("===> Just Before Upload")
+            # print(snapPayload)
+            result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload, auth=auth)
+            # TODO update uniqueID
+            print(result)
+
+        else:
+            raise NotImplementedError("Not implemented yet!")
 
     def getCompositeSnapshotStub(self, uniqueId):
-        a = requests.get(self.url_composite.format(uniqueId)).json()
-        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
+        a = self._getRequest(self.url_composite.format(uniqueId))
+        json_data_Node = self._getRequest(self.url_node.format(uniqueId))
         json_data_Node["referencedSnapshotNodes"] = a["referencedSnapshotNodes"]
         return json_data_Node
 
     def getRoot(self):
-        json_data = requests.get(self.service_url_root).json()
+        json_data = self._getRequest(self.service_url_root)
         return SARItem(**json_data)
 
     def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.NONE, size=100):
         # TODO add ?size=value in request or equivalent, unlikely olog default size param does not alter the returned objects
         toReturn = []
         if nodeType == NodeType.NONE:
-            for one in requests.get(self.url_snapshots).json():
+            for one in self._getRequest(self.url_snapshots):
                 toReturn.append(SARItem(**one))
 
         elif nodeType == NodeType.VIRTUAL_SNAPSHOT:
-            for one in requests.get(self.url_snapshots).json():
+            for one in self._getRequest(self.url_snapshots):
                 if "COMPOSITE" in one["nodeType"]:
                     toReturn.append(SARItem(**one))
 
         elif nodeType == NodeType.SNAPSHOT:
-            for one in requests.get(self.url_snapshots).json():
+            for one in self._getRequest(self.url_snapshots):
                 toReturn.append(self.getSnapshot(one["uniqueId"]))
         else:
-            raise NotImplementedError(
-                "Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
+            raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
 
         for one in toReturn:
             mainTree[one.uniqueId] = one
@@ -146,10 +223,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_child.format(uniqueId)
         if forcedTypeTuple is None:
-            return requests.get(urlToGet).json()
+            return self._getRequest(urlToGet)
         else:
             toReturn = []
-            for one in requests.get(urlToGet).json():
+            for one in self._getRequest(urlToGet):
                 if one is None:
                     pass
                 if one["nodeType"] == forcedTypeTuple[0]:
@@ -160,7 +237,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         if uniqueId is None:
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_parent.format(uniqueId)
-        return requests.get(urlToGet).json()
+        return self._getRequest(urlToGet)
 
 
 class SaveAndRestore:
@@ -174,8 +251,7 @@ class SaveAndRestore:
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
     """
 
-    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint,
-                 cacheFile=None, archiver_url: str = None):
+    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
 
@@ -202,24 +278,49 @@ class SaveAndRestore:
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
-    def takeSnapshot(self, base: SARConfig | SARSnapshot = None, timeout=1) -> SARSnapshot:
+    def takeSnapshot(self, base: SARConfig | SARSnapshot = None, timeout=1, setValues=None, newName=None, newDescription=None) -> SARSnapshot:
         """
         Takes a snapshot for a given config or retakes for existing snapshot
-        :param base: can be SARConfig or a SARSnapshot
-        :param authToken:
-        :param timeout:
-        :return: a mutable snapshot object to be complemented with missing information and saved
+        :param setValues:
+        :param base: can be SARConfig or a SARSnapshot,
+        :param newDescription: description of the snapshot to take,
+        :param newName: name of the snapshot to take,
+        :param timeout: default 1,
+        :return: a mutable snapshot object to be complemented with missing information and saved,
         """
-        newValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)
-        print(newValues)
+        liveValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)
+        newLiveValues = [{k: v} for k, v in zip(base.getPVs(), liveValues)]
+        if isinstance(base, SARConfig):
+            if setValues is None:
+                setValues = newLiveValues[0]
+            snap = {
+                "uniqueId": -1,
+                "name": newName,
+                "description": newDescription,
+                "snapshotItems": [
+                    {
+                        "configPv": o.get(),
+                        "value": {
+                            "value": setValues.get(o.pvName),
+                            "time": {"unixSec": int(datetime.now().timestamp()), "nanoSec": 0},
+                            "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
+                        },
+                    }
+                    for o in base.configList
+                ],
+            }
+            return SARSnapshot(**snap)
+        else:
+            raise NotImplementedError("Taking snapshots is not implement yet!")
+
+    def saveSnapshot(
+        self,
+        snapshot: SARSnapshot = None,
+        authToken=None,
+    ):
         raise NotImplementedError("Taking snapshots is not implement yet!")
 
-    def saveSnapshot(self, snapshot: SARSnapshot = None, authToken=None, ):
-        raise NotImplementedError("Taking snapshots is not implement yet!")
-
-    def createConfiguration(self, name: str = None,
-                            sarConfigPVs: list = None, authToken=None,
-                            description=None) -> SARConfig:
+    def createConfiguration(self, name: str = None, sarConfigPVs: list = None, authToken=None, description=None) -> SARConfig:
         """
         :param description:
         :param name:
@@ -228,9 +329,7 @@ class SaveAndRestore:
         :return:
         """
 
-        return SARConfig(uniqueId=uuid.uuid4(),
-                         sarConfigPVs=sarConfigPVs,
-                         name=name, description=description)
+        return SARConfig(uniqueId=uuid.uuid4(), sarConfigPVs=sarConfigPVs, name=name, description=description)
 
     def getSnapshot(self, snapshotId: str = None, snapshotName: str = None, sarItem: SARItem = None) -> SARSnapshot:
         """

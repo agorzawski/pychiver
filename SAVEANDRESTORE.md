@@ -41,13 +41,7 @@ sar.getSnapshot(snapshotName='Some name of the snapshot')
 # returns a snapshot, if more than one found with the same name, it returns the most recent one.
 ```
 
-#### To create a virtual snapshot
-
-```python
-vSnapshot = sar.createVirtualSnapshot(self, name, snapshots)
-```
-
-### Actions
+### Actions (read)
 >  the following works for the `some_snapshot` being `SARSnapshot` or `SARVirtualSnapshot`
 
 ##### Live values - detailed
@@ -102,7 +96,7 @@ syslog:> check state on: 2022-06-13 19:21:21
 21  MEBT-010:BMD-Chop-001:Field-SP       4500.00             NaN
 ```
 
-
+### Actions (read/create/interact)
 #### To restore:
 
 > **NOTE** the restore (pvput) action is executed where the client package is running. **You may not have a privilege** (due to the network configuration) to successfully execute your call.
@@ -111,28 +105,45 @@ status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of problems
 ```
 
+***
+#### To create a virtual snapshot
+> **NOTE** WORK IN PROGRESS
+```python
+vSnapshot = sar.createVirtualSnapshot(self, name, snapshots)
+```
+
+***
 #### To take/ save new snapshot:
-> **NOTE** WIP, not implemented yet
+> **NOTE** WORK IN PROGRESS
 
 ```python
-some_snapshot = sar.takeSnapshot(config=some_config)
-some_snapshot_retake = sar.takeSnapshot(snapshot=some_snapshot)
+
+some_config = sar.createConfiguration(
+  sarConfigPVs=[SARConfigPV(pvName="SomePV1"),
+                SARConfigPV(pvName="SomePV2"),
+                SARConfigPV(pvName="SomePV3")],
+  name="Configuration created via python",
+  description="Some needed description")
+
+some_snapshot = sar.takeSnapshot()
+some_snapshot_retake = sar.takeSnapshot()
 ```
 
+***
+#### To save them in the service:
 ```python
-sar.save(config=some_config, snapshotName='Some New Name for the Snapshot', comment='Some Comment')
+sar.save(sarItem=some_config, paretnId='uniqueId')
 #or
-sar.save(snapshot=some_snapshot, nodeType=NodeType.SNAPSHOT)
-#or
-sar.save(snapshot=some_snapshot, nodeType=NodeType.VIRTUAL_SNAPSHOT)
+sar.save(sarItem=some_snapshot, paretnId='uniqueId')
 ```
-
+> NOTE No virtual snapshots to be save now yet via this package
 
 ## Domain
 
 The main objects are:
-- `SARConfig`
-- `SARConfigPV`
-- `SARSnapshot` - snapshot that contains the storred configurations
+- `SARConfig` - object that holds configurations for many PVs,
+- `SARConfigPV` - simple configuration for one PV,
+- `SARSnapshotItem` - snapshot item holding individual ConfigPV and its snapshoted value,
+- `SARSnapshot` - snapshot that contains the stored SARSnapshotItems,
 - `SARVirtualSnapshot` - virtual snapshot that holds provided snapshots' references and provides the
   combined actions (e.g. compare, restore) on all of them at once

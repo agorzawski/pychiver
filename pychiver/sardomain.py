@@ -6,9 +6,6 @@ WIP: Some cleanup is needed as it is super bind to the JSONSaveAndRestoreEndPoin
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
-import json
-
-import pandas
 import pandas as pd
 from enum import Enum, unique
 
@@ -85,13 +82,17 @@ class SARConfig(SARItem):
     def getPVs(self) -> list:
         return [o.pvName for o in self.configList]
 
-    def getJSON(self):
-        return json.dumps({"uniqueId": str(self.uniqueId),
-                           "name": self.getName(),
-                           "description": self.description,
-                           "tags": None,
-                           "properties": None,
-                           "pvList": [o.get() for o in self.configList]})
+    # def getJSON(self, addKeysValues=None):
+    #     toDump = {"uniqueId": str(self.uniqueId),
+    #                        "name": self.getName(),
+    #                        "description": self.description,
+    #                        "tags": None,
+    #                        "properties": None,
+    #                        "pvList": [o.get() for o in self.configList]}
+    #     if isinstance(addKeysValues, dict):
+    #         for key, value in addKeysValues.items():
+    #             toDump[key] = value
+    #     return json.dumps(toDump)
 
 
 class SARConfigPV:
@@ -108,9 +109,6 @@ class SARConfigPV:
     def get(self):
         return {"pvName": self.pvName, "readbackPvName": self.readbackPvName, "readonly": self.readonly}
 
-    def getJSON(self):
-        return json.dumps(self.get())
-
 
 class SARSnapshotItem(SARConfigPV):
     # TODO fix it after fixing -SAR Config PV- (class above), expand properly for snapshotItem.
@@ -118,11 +116,13 @@ class SARSnapshotItem(SARConfigPV):
         super().__init__(**kwargs)
         if kwargs.get("value", None) is not None:
             self.__dict__ = kwargs
+            self.pvName = self.configPv["pvName"]  # TODO somehow does not work from the super class
+            self.pvValue = self.value["value"]
         else:
             raise ValueError("No value given")
 
     def __repr__(self):
-        return "{} / {}".format(self.configPv["pvName"], self.configPv.get("readbackPvName", "no readback PV"))
+        return "{} / {}".format(self.pvName, self.pvValue)
 
 
 class SARSnapshot(SARItem):
@@ -147,14 +147,16 @@ class SARSnapshot(SARItem):
         return base
 
     def metaData(self) -> dict:
-        return {'name': self.getName(),
-                'description': self.description,
-                'creator': self.creator,
-                'created': self.created,
-                'lastModified': self.lastModified,
-                'uniqueId': self.uniqueId,
-                'properties': self.properties,
-                'configPVs': self.configPVs, }
+        return {
+            "name": self.getName(),
+            "description": self.description,
+            "creator": self.creator,
+            "created": self.created,
+            "lastModified": self.lastModified,
+            "uniqueId": self.uniqueId,
+            "properties": self.properties,
+            "configPVs": self.configPVs,
+        }
 
     def getPVs(self) -> list:
         return list([o.configPv.get("pvName", []) for o in self.configPVs])
@@ -169,12 +171,12 @@ class SARSnapshot(SARItem):
             _append_config(rowsList, one)
         return pd.DataFrame(rowsList)
 
-    def getJSONForService(self) -> dict:
-        # TODO adapt for the API needs
-        return {"uniqueId": self.uniqueId,
-                "name": self.getName(),
-                "description": self.description,
-                "pvList": [self.getPVs()]}
+    # def getJSONForService(self) -> dict:
+    #     # TODO adapt for the API needs
+    #     return {"uniqueId": self.uniqueId,
+    #             "name": self.getName(),
+    #             "description": self.description,
+    #             "pvList": [self.getPVs()]}
 
 
 class SARVirtualSnapshot(SARItem):

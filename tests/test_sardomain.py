@@ -10,12 +10,12 @@ SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT = {
 
 JSON_SIMPLE_CONFIG = {"pvName": "Lucifer PV", "readbackPvName": "blah", "readonly": False}
 JSON_SIMPLE_SNAPSHOT_VALUE = {
-            "type": {"name": "VDoubleArray", "version": 1},
-            "value": -666,
-            "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
-            "time": {"unixSec": 1623165540, "nanoSec": 386023508},
-            "display": {"units": ""},
-        }
+    "type": {"name": "VDoubleArray", "version": 1},
+    "value": -666,
+    "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
+    "time": {"unixSec": 1623165540, "nanoSec": 386023508},
+    "display": {"units": ""},
+}
 
 JSON_FOR_COMPLETE_SNAPSHOT_VALUE = [
     {
