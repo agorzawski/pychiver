@@ -65,13 +65,12 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             service_url = os.getenv("SAVE_AND_RESTORE_URL", None)
         super().__init__(service_url=service_url)
         self.service_url_root = "{}/root".format(self.service_url)  # deprecated
-        self.url_config_snapshot = "{}/config/{{}}/snapshots".format(self.service_url)  # deprecated
-        self.url_config_items = "{}/snapshot/{{}}/items".format(self.service_url)  # deprecated
 
         self.url_node = "{}/node/{{}}".format(self.service_url)
         self.url_child = "{}/node/{{}}/children".format(self.service_url)
         self.url_parent = "{}/node/{{}}/parent".format(self.service_url)
         self.url_snapshot = "{}/snapshot/{{}}".format(self.service_url)
+        self.url_config = "{}/config/{{}}".format(self.service_url)
         self.url_snapshots = "{}/snapshots".format(self.service_url)
         self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
@@ -80,15 +79,34 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         print(self.__dict__)
 
     def getSnapshot(self, uniqueId):
+        # TODO rename that function for more generic name (getNodeDetails?)
         json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
         if json_data_Node["nodeType"] == "SNAPSHOT":
             json_data = requests.get(self.url_snapshot.format(uniqueId)).json()
+            # print('===== [ RAW SNAPSHOT data from the API] >>>')
+            # print(json_data_Node)
             json_data["uniqueId"] = json_data_Node["uniqueId"]
             json_data["name"] = json_data_Node["name"]
             json_data["description"] = json_data_Node["description"]
+            json_data["creator"] = json_data_Node["userName"]
+            json_data["created"] = json_data_Node["created"]
+            json_data["lastModified"] = json_data_Node["lastModified"]
             return SARSnapshot(**json_data)
+        elif json_data_Node["nodeType"] == "CONFIGURATION":
+            # print('===== [ RAW CONFIGURATION data from the API] >>>')
+            # print(json_data_Node)
+            json_data = requests.get(self.url_config.format(uniqueId)).json()
+            json_data["uniqueId"] = json_data_Node["uniqueId"]
+            json_data["name"] = json_data_Node["name"]
+            json_data["description"] = json_data_Node["description"]
+            return SARConfig(**json_data)
         else:
             return None
+
+    def save(self, sarItem: SARItem, parentId=None):
+        # TODO check if item can be saved for parent
+        # TODO check if item is not duplicate? (lists_pvs/ values)
+        raise NotImplementedError("Not implemented yet!")
 
     def getCompositeSnapshotStub(self, uniqueId):
         a = requests.get(self.url_composite.format(uniqueId)).json()
@@ -116,7 +134,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             for one in requests.get(self.url_snapshots).json():
                 toReturn.append(self.getSnapshot(one["uniqueId"]))
         else:
-            raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
+            raise NotImplementedError(
+                "Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
 
         for one in toReturn:
             mainTree[one.uniqueId] = one
@@ -143,10 +162,6 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         urlToGet = self.url_parent.format(uniqueId)
         return requests.get(urlToGet).json()
 
-    def getItems(self, uniqueId):
-        r = requests.get(self.url_config_items.format(uniqueId))
-        return r.json()
-
 
 class SaveAndRestore:
     """
@@ -159,7 +174,8 @@ class SaveAndRestore:
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
     """
 
-    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
+    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint,
+                 cacheFile=None, archiver_url: str = None):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
 
@@ -186,14 +202,35 @@ class SaveAndRestore:
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
-    def takeSnapshot(self, config: SARConfig = None, snapshot: SARSnapshot = None) -> SARSnapshot:
+    def takeSnapshot(self, base: SARConfig | SARSnapshot = None, timeout=1) -> SARSnapshot:
         """
-        Prepares a snapshot for a given config.
-        :param snapshot:
-        :param config:
+        Takes a snapshot for a given config or retakes for existing snapshot
+        :param base: can be SARConfig or a SARSnapshot
+        :param authToken:
+        :param timeout:
         :return: a mutable snapshot object to be complemented with missing information and saved
         """
+        newValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)
+        print(newValues)
         raise NotImplementedError("Taking snapshots is not implement yet!")
+
+    def saveSnapshot(self, snapshot: SARSnapshot = None, authToken=None, ):
+        raise NotImplementedError("Taking snapshots is not implement yet!")
+
+    def createConfiguration(self, name: str = None,
+                            sarConfigPVs: list = None, authToken=None,
+                            description=None) -> SARConfig:
+        """
+        :param description:
+        :param name:
+        :param sarConfigPVs:
+        :param authToken:
+        :return:
+        """
+
+        return SARConfig(uniqueId=uuid.uuid4(),
+                         sarConfigPVs=sarConfigPVs,
+                         name=name, description=description)
 
     def getSnapshot(self, snapshotId: str = None, snapshotName: str = None, sarItem: SARItem = None) -> SARSnapshot:
         """
@@ -288,10 +325,14 @@ class SaveAndRestore:
             print(self.cachedConfigurations)
             return self.cachedConfigurations
 
-    def getConfiguration(self, name=None) -> SARConfig:
+    def getConfiguration(self, configId: str = None, name: str = None) -> SARConfig:
         # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
         # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
-        raise NotImplementedError("Not implemented yet!")
+
+        if configId is not None:
+            return self.service.getSnapshot(configId)
+        else:
+            raise NotImplementedError("Not implemented yet!")
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
@@ -370,7 +411,7 @@ class SaveAndRestore:
             warnings.warn("Something went wrong. Values not set.")
         return 0
 
-    def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None, nodeType=NodeType.SNAPSHOT):
+    def save(self, sarItem: SARConfig | SARSnapshot = None, parentNode: SARFolder = None):
         # TODO to be implemented, to be found in the REST Api how to do it
         raise NotImplementedError("Not implemented yet!")
 
