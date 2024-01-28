@@ -24,6 +24,7 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+import numpy as np
 import pandas
 import math
 from json import JSONDecodeError
@@ -33,7 +34,6 @@ from .archiver import Archiver
 from .timeutils import getDateTimeObj, datetime, timedelta
 from .instances import DEFAULT_SAVE_RESTORE
 import epics
-import uuid
 import pickle
 import warnings
 
@@ -86,7 +86,7 @@ class SaveAndRestore:
         :param timeout: default 1,
         :return: a mutable snapshot object to be complemented with missing information and saved,
         """
-        liveValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)
+        liveValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)  # TODO fix pyepics to p4p
         newLiveValues = [{k: v} for k, v in zip(base.getPVs(), liveValues)]
         if isinstance(base, SARConfig):
             if setValues is None:
@@ -98,7 +98,7 @@ class SaveAndRestore:
                 "snapshotItems": [
                     _prep_snapshot_item(
                         o.get(),
-                        setValues.get(o.pvName),
+                        setValues.get(o.pvName, np.nan),
                         int(datetime.now().timestamp()),
                     )
                     for o in base.configList
@@ -106,29 +106,12 @@ class SaveAndRestore:
             }
             return SARSnapshot(**snap)
         else:
-            raise NotImplementedError("Taking snapshots is not implement yet!")
-
-    def saveSnapshot(
-        self,
-        snapshot: SARSnapshot = None,
-        authToken=None,
-    ):
-        raise NotImplementedError("Taking snapshots is not implement yet!")
-
-    def createConfiguration(self, name: str = None, description: str = None, sarConfigPVs: list[SARConfigPV] = None) -> SARConfig:
-        """
-        :param description:
-        :param name:
-        :param sarConfigPVs:
-        :param authToken:
-        :return:
-        """
-
-        return SARConfig(uniqueId=uuid.uuid4(), sarConfigPVs=sarConfigPVs, name=name, description=description)
+            raise NotImplementedError("Taking snapshots ONLY from the SarConfig for now (Work in Progress)!")
 
     def getSnapshot(self, snapshotId: str = None, snapshotName: str = None, sarItem: SARItem = None) -> SARSnapshot:
         """
         Returns one snapshot by provided unique ID
+        :param sarItem: already existing object
         :param snapshotName: individual snapshot name
         :param snapshotId: individual snapshot ID
         :return: snapshot
@@ -136,7 +119,7 @@ class SaveAndRestore:
         """
         if snapshotName is not None and snapshotId is not None and sarItem is not None:
             raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
-        if sarItem is not None:
+        if sarItem is not None and not sarItem.dirty:
             return self.service.getSarItem(sarItem.uniqueId)
         if snapshotId is not None:
             try:
@@ -145,7 +128,6 @@ class SaveAndRestore:
                 warnings.warn("Something went wrong with finding the provided snapshotId='{}'".format(snapshotId))
         if snapshotName is not None:
             allSnapshots = self.getAll()
-            # TODO add finding the last one
             for one in allSnapshots.values():
                 if snapshotName in one.name:
                     return self.getSnapshot(snapshotId=one.uniqueId)
@@ -173,7 +155,7 @@ class SaveAndRestore:
             toReturn[one["name"]] = self.service.getSarItem(one["uniqueId"])
         return toReturn
 
-    def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARVirtualSnapshot:
+    def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARCompositeSnapshot:
         """
         :return: a virtual snapshot
         """
@@ -187,19 +169,7 @@ class SaveAndRestore:
                 aInception = self.getCompositeSnapshot(oneSnapshotId)
                 for oneS in aInception.getSnapshots():
                     snapshots.append(oneS)
-        return SARVirtualSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
-
-    def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:
-        """
-        From the provided snapshots it creates a virtual one, that combines the source.
-        Returns a non editable bundle, that can be treated similarly like other snapshots, e.g. compare or restore.
-        :param name: An unique name to add
-        :param snapshots: a list of snapshots (SARSnapshot)
-        :return: a virtual snapshot
-        """
-        # TODO add creation check process support
-        # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
-        return SARVirtualSnapshot(uniqueId=uuid.uuid4(), name=name, snapshots=snapshots)
+        return SARCompositeSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
 
     def getAll(self, useCache=False, nodeType=NodeType.NONE) -> dict:
         """
@@ -219,12 +189,10 @@ class SaveAndRestore:
 
     def getConfiguration(self, configId: str = None, name: str = None) -> SARConfig:
         # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
-        # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
-
-        if configId is not None:
-            item = self.service.getSarItem(configId)
-            if isinstance(item, SARConfig):
-                return item
+        # this has also a dedicated task the https://gitlab.esss.lu.se/ics-software/jmasar-service
+        item = self.service.getSarItem(configId)
+        if isinstance(item, SARConfig):
+            return item
         raise ValueError("Given UniqueId {} is not for the configuration.".format(configId))
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
@@ -257,8 +225,9 @@ class SaveAndRestore:
         """
         df = snapshot.getStoredValues()
         if date_time is None:
-            # TODO add some comperror support
-            values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)  # TODO check order PVs
+            # TODO add some comparator support
+            # TODO fix pyepics to p4p
+            values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)
             df["live_value"] = values
             df["archived_value"] = math.nan
             try:
@@ -299,13 +268,15 @@ class SaveAndRestore:
         try:
             pvsToPut = [one.configPv["pvName"] for one in snapshot.getConfigPVs]
             valuesToPut = [one.value["value"] for one in snapshot.getConfigPVs]
-            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)
+            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)  # TODO fix pyepics to p4p
         except Exception:
             warnings.warn("Something went wrong. Values not set.")
         return 0
 
     def save(self, sarItem: SARConfig | SARSnapshot, parentNode=None, author=None):
         # TODO to be implemented, to be found in the REST Api how to do it
+        # TODO check if item can be saved for parent
+        # TODO extend to folders
         raise NotImplementedError("Not implemented yet!")
 
     def _updateCache(self, newConfiguration):

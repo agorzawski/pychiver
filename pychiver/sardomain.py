@@ -25,14 +25,20 @@ class SARItem:
     """
 
     def __init__(self, **kwargs):
+        self.uniqueId = 'init'
+        self.name = 'init'
+        self.description = 'init'
+        self.nodeType = NodeType.NONE
         if kwargs.get("name", None) is None or kwargs.get("uniqueId", None) is None:
             raise ValueError("Cannot initialise SARItem object without name or uniqueId")
         self.__dict__ = kwargs
         if kwargs.get("nodeType", None):
             self.nodeType = NodeType.NONE
+        if kwargs.get("dirty", None) is None:
+            self.dirty = False
 
     def getType(self) -> str:
-        return self.nodeType
+        return self.nodeType.name
 
     def getName(self) -> str:
         return self.name
@@ -81,18 +87,6 @@ class SARConfig(SARItem):
 
     def getPVs(self) -> list:
         return [o.pvName for o in self.configList]
-
-    # def getJSON(self, addKeysValues=None):
-    #     toDump = {"uniqueId": str(self.uniqueId),
-    #                        "name": self.getName(),
-    #                        "description": self.description,
-    #                        "tags": None,
-    #                        "properties": None,
-    #                        "pvList": [o.get() for o in self.configList]}
-    #     if isinstance(addKeysValues, dict):
-    #         for key, value in addKeysValues.items():
-    #             toDump[key] = value
-    #     return json.dumps(toDump)
 
 
 class SARConfigPV:
@@ -171,15 +165,8 @@ class SARSnapshot(SARItem):
             _append_config(rowsList, one)
         return pd.DataFrame(rowsList)
 
-    # def getJSONForService(self) -> dict:
-    #     # TODO adapt for the API needs
-    #     return {"uniqueId": self.uniqueId,
-    #             "name": self.getName(),
-    #             "description": self.description,
-    #             "pvList": [self.getPVs()]}
 
-
-class SARVirtualSnapshot(SARItem):
+class SARCompositeSnapshot(SARItem):
     """
     SAR Item dedicated for a given snapshot instance.
     """
@@ -241,6 +228,42 @@ class SARVirtualSnapshot(SARItem):
             for onePV in one.configPVs:
                 combinedList.append(onePV)
         return list(combinedList)
+
+
+class SarItemBuilder:
+    DIRTY_SAR_ITEM = -1
+
+    @classmethod
+    def getInstance(cls):
+        new_instance = cls()
+        return new_instance
+
+    def createConfiguration(self, name: str,
+                            description: str,
+                            sarConfigPVs: list[SARConfigPV]) -> SARConfig:
+        """
+        :param name: A unique name of the configuration
+        :param description: Description of the configuration
+        :param sarConfigPVs: list of SarConfigPVs to be included in the configuration
+        :return:
+        """
+        return SARConfig(uniqueId=self.DIRTY_SAR_ITEM, sarConfigPVs=sarConfigPVs, name=name, description=description,
+                         dirty=True)
+
+    def createCompositeSnapshot(self, name:str, description:str,
+                                snapshots: list[SARSnapshot | SARCompositeSnapshot]) -> SARCompositeSnapshot:
+        """
+        From the provided snapshots it creates a virtual one, that combines the source.
+        Returns a non-editable bundle, that can be treated similarly like other snapshots, e.g. compare or restore.
+        :param name: A unique name to add
+        :param description: Description of the configuration
+        :param snapshots: A list of snapshots (SARSnapshot or VirtualSnapshot) to be included in the CompositeSnapshot
+        :return: a Composite Snapshot
+        """
+        # TODO add creation check process support
+        # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
+        return SARCompositeSnapshot(uniqueId=self.DIRTY_SAR_ITEM, name=name, description=description,
+                                    snapshots=snapshots, dirty=True)
 
 
 def _append_config(rowsList, one: SARSnapshotItem):

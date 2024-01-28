@@ -69,6 +69,7 @@ class SaveAndRestoreEndPoint(ABC):
 
     @abstractmethod
     def getCompositeSnapshotStub(self, uniqueId):
+        """ To be moved into @getSarItem"""
         pass
 
     @abstractmethod
@@ -127,7 +128,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         print(self.__dict__)
 
     def getSarItem(self, uniqueId) -> SARItem:
-        # TODO rename that function for more generic name (getNodeDetails?)
+        if uniqueId is None:
+            raise ValueError('cannot search for None uniqueId!')
         json_data_Node = self._getRequest(self.url_node.format(uniqueId))
         return self._fromNode_toSAR(json_data_Node)
 
@@ -153,12 +155,17 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             json_data["description"] = json_data_Node["description"]
             return SARConfig(**json_data)
         else:
-            return None
+            raise ValueError("Provided data is not a valid format! Maybe something wrong with the request type?")
 
-    def saveSarItem(self, sarItem: SARItem, parentId=None, author=None):
-        # WIP following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
+    def saveSarItem(self, sarItem: SARSnapshot|SARConfig, parentId=None, author=None):
+        """
+        following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
+        :param sarItem:
+        :param parentId:
+        :param author:
+        :return:
+        """
 
-        # TODO check if item can be saved for parent
         # TODO check if item is not duplicate? (lists_pvs/ values)
         auth = HTTPBasicAuth(author, "12345678abcd")
 
@@ -220,7 +227,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         return SARItem(**json_data)
 
     def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.NONE, size=100):
-        # TODO add ?size=value in request or equivalent, unlikely olog default size param does not alter the returned objects
+        # TODO add ?size=value in request or equivalent,
+        #  unlikely olog default size param does not alter the returned objects
         toReturn = []
         if nodeType == NodeType.NONE:
             for one in self._getRequest(self.url_snapshots):
