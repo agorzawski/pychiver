@@ -213,7 +213,7 @@ class SARCompositeSnapshot(SARItem):
             self.snapshots.append(one)
 
     def __repr__(self):
-        base = "VIRTUAL: {} / {} ".format(self.name, self.uniqueId)
+        base = "[V][ ] {} / {} ".format(self.name, self.uniqueId)
         return base
 
     def getSnapshots(self):
@@ -240,14 +240,6 @@ class SARCompositeSnapshot(SARItem):
                 if one.pvName == pvName:
                     return one.pvValue
         raise ValueError("no {} stored in this snapshot!".format(pvName))
-
-    @property
-    def snapshotConfigPVs(self):
-        combinedList = []
-        for one in self.snapshots:
-            for onePV in one.snapshotConfigPVs:
-                combinedList.append(onePV)
-        return list(combinedList)
 
     @property
     def getConfigPVs(self) -> list:

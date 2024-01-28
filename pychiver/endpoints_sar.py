@@ -159,8 +159,9 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         elif json_data_Node["nodeType"] == "FOLDER":
             deepestFolder = [json_data_Node["name"]]
             rootFolder = "Root" in json_data_Node["name"] or "root" in json_data_Node["name"]
+            json_data_rep = json_data_Node
             while not rootFolder:
-                json_data_rep = self._getRequest(self.url_parent.format(json_data_Node["uniqueId"]))
+                json_data_rep = self._getRequest(self.url_parent.format(json_data_rep["uniqueId"]))
                 rootFolder = "Root" in json_data_rep["name"] or "root" in json_data_rep["name"]
                 deepestFolder.append(json_data_rep["name"])
             fullPath = "/".join(deepestFolder[::-1])
