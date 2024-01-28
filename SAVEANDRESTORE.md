@@ -12,22 +12,12 @@ sar = SaveAndRestore()
 > there is `service_url` argument available, by default `pychiver.instances.DEFAULT_SAVE_RESTORE` is used.
 
 
-[//]: # (#### To get information of all nodes of given type:)
+#### To get information of all snapshots:
 
-[//]: # ()
-[//]: # (```python)
-
-[//]: # (configurationsNamesAndIds = sar.getAll&#40;&#41;)
-
-[//]: # (# returns a dict of NameOfConfig to Configuration &#40;default is NodeType.CONFIGURATION&#41;)
-
-[//]: # ()
-[//]: # (snapshotsNamesAndIds = sar.getAll&#40;nodeType=NodeType.SNAPSHOT&#41;)
-
-[//]: # (# returns a dict of SnapshotName to Snapshot definition)
-
-[//]: # (```)
-
+```python
+snapshotsAll = sar.getAll()
+# returns a dict of uniqueId to Snapshot
+```
 
 #### To get a specific configuration or snapshot:
 

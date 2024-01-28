@@ -106,9 +106,11 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self._session.mount("https://", adapter)
 
     def _getRequest(self, url):
+        # print('Asking for ', url)
         r = self._session.get(url, verify=False)
         if r.status_code == 200:
             jsonContent = json.loads(r.content)
+            # print(jsonContent)
         else:
             raise ValueError("Bad Request: " + r.content)
         return jsonContent
@@ -144,6 +146,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             json_data["creator"] = json_data_Node["userName"]
             json_data["created"] = json_data_Node["created"]
             json_data["lastModified"] = json_data_Node["lastModified"]
+            json_data["tags"] = json_data_Node["tags"]
             return SARSnapshot(**json_data)
         elif json_data_Node["nodeType"] == "CONFIGURATION":
             # print('===== [ RAW CONFIGURATION data from the API] >>>')
@@ -153,6 +156,15 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             json_data["name"] = json_data_Node["name"]
             json_data["description"] = json_data_Node["description"]
             return SARConfig(**json_data)
+        elif json_data_Node["nodeType"] == "FOLDER":
+            deepestFolder = [json_data_Node["name"]]
+            rootFolder = "Root" in json_data_Node["name"] or "root" in json_data_Node["name"]
+            while not rootFolder:
+                json_data_rep = self._getRequest(self.url_parent.format(json_data_Node["uniqueId"]))
+                rootFolder = "Root" in json_data_rep["name"] or "root" in json_data_rep["name"]
+                deepestFolder.append(json_data_rep["name"])
+            fullPath = "/".join(deepestFolder[::-1])
+            return SARFolder(**{**json_data_Node, "fullPath": fullPath})
         else:
             raise ValueError("Provided data is not a valid format! Maybe something wrong with the request type?")
 
@@ -238,9 +250,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
         elif nodeType == NodeType.SNAPSHOT:
             for one in self._getRequest(self.url_snapshots):
-                toReturn.append(self.getSarItem(one["uniqueId"]))
+                if one["nodeType"] in nodeType.name:
+                    toReturn.append(self.getSarItem(one["uniqueId"]))
         else:
-            raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
+            raise NotImplementedError("Only Definitions of Snapshots&Composite for now. No other types supported yet!")
 
         for one in toReturn:
             mainTree[one.uniqueId] = one

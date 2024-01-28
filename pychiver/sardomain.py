@@ -6,17 +6,19 @@ WIP: Some cleanup is needed as it is super bind to the JSONSaveAndRestoreEndPoin
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+import warnings
+
 import pandas as pd
 from enum import Enum, unique
 
 
 @unique
 class NodeType(Enum):
-    NONE = 0
-    FOLDER = 1
-    CONFIGURATION = 2
-    SNAPSHOT = 3
-    VIRTUAL_SNAPSHOT = 4
+    NONE = " "
+    FOLDER = "F"
+    CONFIGURATION = "C"
+    SNAPSHOT = "S"
+    VIRTUAL_SNAPSHOT = "V"
 
 
 class SARItem:
@@ -46,7 +48,7 @@ class SARItem:
         return self.name
 
     def __repr__(self):
-        return "{} / {}".format(self.name, self.uniqueId)
+        return "[{}][{}] {} / {}".format(self.nodeType.value, "*" if self.dirty else " ", self.name, self.uniqueId)
 
 
 class SARFolder(SARItem):
@@ -64,7 +66,7 @@ class SARFolder(SARItem):
         return self.fullPath
 
     def __repr__(self):
-        return "[{} - {}]".format(self.fullPath, self.uniqueId)
+        return "[F][{} - {}]".format(self.fullPath, self.uniqueId)
 
 
 class SARConfig(SARItem):
@@ -86,6 +88,7 @@ class SARConfig(SARItem):
                     self.configList.append(o)
                 else:
                     raise ValueError("Incorrect type of the given object ", o)
+        self.nodeType = NodeType.CONFIGURATION
 
     def getPVs(self) -> list:
         return [o.pvName for o in self.configList]
@@ -134,15 +137,22 @@ class SARSnapshot(SARItem):
         self.configPVs = []
         if kwargs.get("snapshotItems", None) is None:
             raise ValueError("Cannot initialise SARSnapshot object without snapshotItems/configPVs!")
-        if kwargs.get("properties", None) is None:
-            self.properties = {"golden": "false"}
+        if kwargs.get("tags", None) is None:
+            self.tags = []
         for one in kwargs.get("snapshotItems"):
-            self.configPVs.append(SARSnapshotItem(**one))
+            try:
+                self.configPVs.append(SARSnapshotItem(**one))
+            except ValueError:
+                warnings.warn("Given snapshotItem {} is incomplete, " "omitting it and making your snapshot dirty".format(one))
+                self.dirty = True
+        self.nodeType = NodeType.SNAPSHOT
 
     def __repr__(self):
-        base = "{} / {} ".format(self.name, self.uniqueId)
-        if self.properties.get("golden") == "true":
-            base += " GOLDEN"
+        base = "[S][{}] {} / {} ".format("*" if self.dirty else " ", self.name, self.uniqueId)
+        for oneTag in self.tags:
+            if "golden" in oneTag.get("name"):
+                base += " GOLDEN"
+                break
         return base
 
     def metaData(self) -> dict:

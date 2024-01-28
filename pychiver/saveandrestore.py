@@ -169,6 +169,11 @@ class SaveAndRestore:
             toReturn[one["name"]] = self.service.getSarItem(one["uniqueId"])
         return toReturn
 
+    def getSnapshotLocation(self, snapshot: SARSnapshot) -> tuple[SARFolder | SARConfig]:
+        parentConfig = self.service.getParent(uniqueId=snapshot.uniqueId)
+        deepestFolder = self.service.getParent(uniqueId=parentConfig.uniqueId)
+        return deepestFolder, parentConfig
+
     def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARCompositeSnapshot:
         """
         :return: a virtual snapshot
@@ -185,10 +190,11 @@ class SaveAndRestore:
                     snapshots.append(oneS)
         return SARCompositeSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
 
-    def getAll(self, useCache=False, nodeType=NodeType.NONE) -> dict:
+    def getAll(self, useCache=False, nodeType=NodeType.SNAPSHOT) -> dict[str | SARSnapshot]:
         """
-        Returns all configurations found in the system. If useCache is True, it retrieves it from the local file.
+        Returns all snapshots found in the system. If useCache is True, it retrieves it from the local file.
 
+        :param nodeType: default SNAPSHOT
         :param useCache: optional, default False
         :return:
         """
@@ -198,7 +204,7 @@ class SaveAndRestore:
             self._updateCache(configurations)
             return configurations
         else:
-            print(self.cachedConfigurations)
+            # print(self.cachedConfigurations)
             return self.cachedConfigurations
 
     def getConfiguration(self, configId: str = None, name: str = None) -> SARConfig:
@@ -253,13 +259,13 @@ class SaveAndRestore:
             if self._archiver is None:
                 raise ValueError("Service not instantiated with the archiver link. Cannot perform that action!")
             date_time_to_consider = getDateTimeObj(date_time)
-            print(date_time_to_consider)
+            # print(date_time_to_consider)
             startD = date_time_to_consider - timedelta(seconds=1)  # TODO archiver window to consider?
             endD = date_time_to_consider + timedelta(seconds=1)
             data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD)
-            print("=======")
-            print(data)
-            print("=======")
+            # print("=======")
+            # print(data)
+            # print("=======")
             df["live_value"] = math.nan
             values = []
             for one in snapshot.getPVs():
