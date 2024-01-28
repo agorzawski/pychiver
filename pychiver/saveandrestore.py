@@ -137,10 +137,10 @@ class SaveAndRestore:
         if snapshotName is not None and snapshotId is not None and sarItem is not None:
             raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
         if sarItem is not None:
-            return self.service.getSnapshot(sarItem.uniqueId)
+            return self.service.getSarItem(sarItem.uniqueId)
         if snapshotId is not None:
             try:
-                return self.service.getSnapshot(snapshotId)
+                return self.service.getSarItem(snapshotId)
             except JSONDecodeError:
                 warnings.warn("Something went wrong with finding the provided snapshotId='{}'".format(snapshotId))
         if snapshotName is not None:
@@ -170,7 +170,7 @@ class SaveAndRestore:
         allInParentConfig = self.service.getChildren(uniqueId=uniqueId)
         toReturn = {}
         for one in allInParentConfig:
-            toReturn[one["name"]] = self.service.getSnapshot(one["uniqueId"])
+            toReturn[one["name"]] = self.service.getSarItem(one["uniqueId"])
         return toReturn
 
     def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARVirtualSnapshot:
@@ -180,7 +180,7 @@ class SaveAndRestore:
         json = self.service.getCompositeSnapshotStub(snapshotId)
         snapshots = []
         for oneSnapshotId in json["referencedSnapshotNodes"]:
-            a = self.service.getSnapshot(oneSnapshotId)
+            a = self.service.getSarItem(oneSnapshotId)
             if isinstance(a, SARSnapshot):
                 snapshots.append(a)
             else:
@@ -222,9 +222,10 @@ class SaveAndRestore:
         # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
 
         if configId is not None:
-            return self.service.getSnapshot(configId)
-        else:
-            raise NotImplementedError("Not implemented yet!")
+            item = self.service.getSarItem(configId)
+            if isinstance(item, SARConfig):
+                return item
+        raise ValueError("Given UniqueId {} is not for the configuration.".format(configId))
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
@@ -303,7 +304,7 @@ class SaveAndRestore:
             warnings.warn("Something went wrong. Values not set.")
         return 0
 
-    def save(self, sarItem: SARConfig | SARSnapshot = None, parentNode: SARFolder = None):
+    def save(self, sarItem: SARConfig | SARSnapshot, parentNode=None, author=None):
         # TODO to be implemented, to be found in the REST Api how to do it
         raise NotImplementedError("Not implemented yet!")
 

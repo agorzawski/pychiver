@@ -24,6 +24,8 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+import warnings
+
 from .sardomain import *
 
 import json
@@ -50,15 +52,19 @@ class SaveAndRestoreEndPoint(ABC):
         self.service_url = service_url
 
     @abstractmethod
-    def getSnapshot(self, uniqueId):
+    def getSarItem(self, uniqueId) -> SARItem:
         pass
 
     @abstractmethod
-    def save(self, sarItem: SARItem, parentId=None, author=None):
+    def saveSarItem(self, sarItem: SARItem, parentId=None, author=None):
         pass
 
     @abstractmethod
     def getChildren(self, uniqueId=None, forcedTypeTuple=None):
+        pass
+
+    @abstractmethod
+    def getParent(self, uniqueId=None) -> SARItem:
         pass
 
     @abstractmethod
@@ -111,15 +117,22 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         return r
 
     def _putRequest(self, url, payloadJson, auth=None):
-        r = self._session.put(url, json=payloadJson, auth=auth, verify=False, headers={"Content-Type": "application/json"})
+        r = self._session.put(url, json=payloadJson, auth=auth, verify=False,
+                              headers={"Content-Type": "application/json"})
+        if r.status_code != 200:
+            warnings.warn("There is an issue [code {}] with the request! {}".format(r.status_code, r))
         return r
 
     def status(self):
         print(self.__dict__)
 
-    def getSnapshot(self, uniqueId):
+    def getSarItem(self, uniqueId) -> SARItem:
         # TODO rename that function for more generic name (getNodeDetails?)
         json_data_Node = self._getRequest(self.url_node.format(uniqueId))
+        return self._fromNode_toSAR(json_data_Node)
+
+    def _fromNode_toSAR(self, json_data_Node ) -> SARItem:
+        uniqueId = json_data_Node['uniqueId']
         if json_data_Node["nodeType"] == "SNAPSHOT":
             json_data = self._getRequest(self.url_snapshot.format(uniqueId))
             # print('===== [ RAW SNAPSHOT data from the API] >>>')
@@ -142,7 +155,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         else:
             return None
 
-    def save(self, sarItem: SARItem, parentId=None, author=None):
+    def saveSarItem(self, sarItem: SARItem, parentId=None, author=None):
         # WIP following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
 
         # TODO check if item can be saved for parent
@@ -220,7 +233,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
         elif nodeType == NodeType.SNAPSHOT:
             for one in self._getRequest(self.url_snapshots):
-                toReturn.append(self.getSnapshot(one["uniqueId"]))
+                toReturn.append(self.getSarItem(one["uniqueId"]))
         else:
             raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
 
@@ -233,7 +246,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_child.format(uniqueId)
         if forcedTypeTuple is None:
-            return self._getRequest(urlToGet)
+            return self._getRequest(urlToGet)  # TODO apply self._fromNode_toSAR()
         else:
             toReturn = []
             for one in self._getRequest(urlToGet):
@@ -243,8 +256,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     toReturn.append(forcedTypeTuple[1](**one))
             return toReturn
 
-    def getParent(self, uniqueId=None):
+    def getParent(self, uniqueId=None) -> SARItem:
         if uniqueId is None:
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_parent.format(uniqueId)
-        return self._getRequest(urlToGet)
+        return self._fromNode_toSAR(self._getRequest(urlToGet))

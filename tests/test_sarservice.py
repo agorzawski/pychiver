@@ -42,6 +42,9 @@ SNAPSHOT_2 = SARSnapshot(
 
 
 class MockUpEndpoint(SaveAndRestoreEndPoint):
+    def getParent(self, uniqueId=None) -> SARItem:
+        pass
+
     def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.NONE, size=100):
         toReturn = [CONFIG, SNAPSHOT_1, SNAPSHOT_2]
         for one in toReturn:
@@ -51,7 +54,7 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
     def __init__(self, service_url=None):
         super().__init__(service_url=service_url)
 
-    def getSnapshot(self, uniqueId):
+    def getSarItem(self, uniqueId) -> SARItem:
         if UID_CONFIG in uniqueId:
             return CONFIG
         if UID_SNAPSHOT_1 in uniqueId:
@@ -59,7 +62,7 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
         if UID_SNAPSHOT_2 in uniqueId:
             return SNAPSHOT_2
 
-    def save(self, sarItem: SARItem, parentId=None, author=None):
+    def saveSarItem(self, sarItem: SARItem, parentId=None, author=None):
         pass
 
     def getChildren(self, uniqueId=None, forcedTypeTuple=None):
