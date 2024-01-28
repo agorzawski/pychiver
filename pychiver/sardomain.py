@@ -24,10 +24,12 @@ class SARItem:
     Top level SAR item, can be anything related to the SAR.
     """
 
+    INIT = "stub"
+
     def __init__(self, **kwargs):
-        self.uniqueId = 'init'
-        self.name = 'init'
-        self.description = 'init'
+        self.uniqueId = self.INIT
+        self.name = self.INIT
+        self.description = self.INIT
         self.nodeType = NodeType.NONE
         if kwargs.get("name", None) is None or kwargs.get("uniqueId", None) is None:
             raise ValueError("Cannot initialise SARItem object without name or uniqueId")
@@ -125,10 +127,13 @@ class SARSnapshot(SARItem):
     """
 
     def __init__(self, **kwargs):
+        self.creator = self.INIT
+        self.created = self.INIT
+        self.lastModified = self.INIT
         super().__init__(**kwargs)
         self.configPVs = []
         if kwargs.get("snapshotItems", None) is None:
-            raise ValueError("Cannot initialise SARSnapshot object without configPvs!")
+            raise ValueError("Cannot initialise SARSnapshot object without snapshotItems/configPVs!")
         if kwargs.get("properties", None) is None:
             self.properties = {"golden": "false"}
         for one in kwargs.get("snapshotItems"):
@@ -164,6 +169,12 @@ class SARSnapshot(SARItem):
         for one in self.configPVs:
             _append_config(rowsList, one)
         return pd.DataFrame(rowsList)
+
+    def getStoredValue(self, pvName):
+        for one in self.configPVs:
+            if one.pvName == pvName:
+                return one.pvValue
+        raise ValueError("no {} stored in this snapshot!".format(pvName))
 
 
 class SARCompositeSnapshot(SARItem):
@@ -213,6 +224,13 @@ class SARCompositeSnapshot(SARItem):
                 _append_config(rowsList, one)
         return pd.DataFrame(rowsList)
 
+    def getStoredValue(self, pvName):
+        for oneSnap in self.snapshots:
+            for one in oneSnap.configPVs:
+                if one.pvName == pvName:
+                    return one.pvValue
+        raise ValueError("no {} stored in this snapshot!".format(pvName))
+
     @property
     def snapshotConfigPVs(self):
         combinedList = []
@@ -238,20 +256,16 @@ class SarItemBuilder:
         new_instance = cls()
         return new_instance
 
-    def createConfiguration(self, name: str,
-                            description: str,
-                            sarConfigPVs: list[SARConfigPV]) -> SARConfig:
+    def createConfiguration(self, name: str, description: str, sarConfigPVs: list[SARConfigPV]) -> SARConfig:
         """
         :param name: A unique name of the configuration
         :param description: Description of the configuration
         :param sarConfigPVs: list of SarConfigPVs to be included in the configuration
         :return:
         """
-        return SARConfig(uniqueId=self.DIRTY_SAR_ITEM, sarConfigPVs=sarConfigPVs, name=name, description=description,
-                         dirty=True)
+        return SARConfig(uniqueId=self.DIRTY_SAR_ITEM, sarConfigPVs=sarConfigPVs, name=name, description=description, dirty=True)
 
-    def createCompositeSnapshot(self, name:str, description:str,
-                                snapshots: list[SARSnapshot | SARCompositeSnapshot]) -> SARCompositeSnapshot:
+    def createCompositeSnapshot(self, name: str, description: str, snapshots: list[SARSnapshot | SARCompositeSnapshot]) -> SARCompositeSnapshot:
         """
         From the provided snapshots it creates a virtual one, that combines the source.
         Returns a non-editable bundle, that can be treated similarly like other snapshots, e.g. compare or restore.
@@ -262,8 +276,7 @@ class SarItemBuilder:
         """
         # TODO add creation check process support
         # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
-        return SARCompositeSnapshot(uniqueId=self.DIRTY_SAR_ITEM, name=name, description=description,
-                                    snapshots=snapshots, dirty=True)
+        return SARCompositeSnapshot(uniqueId=self.DIRTY_SAR_ITEM, name=name, description=description, snapshots=snapshots, dirty=True)
 
 
 def _append_config(rowsList, one: SARSnapshotItem):

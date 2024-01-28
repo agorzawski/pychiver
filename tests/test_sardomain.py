@@ -45,8 +45,7 @@ class TestSARItems(unittest.TestCase):
             SARSnapshot(**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT)
 
     def test_correct_dirty_init_snapshot(self):
-        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT,
-                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE, "dirty": True})
+        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE, "dirty": True})
         self.assertTrue(a.dirty)
 
     def test_correct_init_snapshot(self):
@@ -71,11 +70,7 @@ class TestSARItems(unittest.TestCase):
         SARSnapshotItem(**JSON_FOR_COMPLETE_SNAPSHOT_VALUE[0])
 
     def test_correct_composite_snapshot(self):
-        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT,
-                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
-        b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2,
-                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
-        comp = SARCompositeSnapshot(uniqueId=-1, name="Some Funny Name", description="Some other description",
-                                    snapshots=[a, b])
+        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
+        b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
+        comp = SARCompositeSnapshot(uniqueId=-1, name="Some Funny Name", description="Some other description", snapshots=[a, b])
         self.assertEqual(len(comp.getSnapshots()), 2)
-

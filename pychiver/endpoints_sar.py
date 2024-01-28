@@ -69,7 +69,7 @@ class SaveAndRestoreEndPoint(ABC):
 
     @abstractmethod
     def getCompositeSnapshotStub(self, uniqueId):
-        """ To be moved into @getSarItem"""
+        """To be moved into @getSarItem"""
         pass
 
     @abstractmethod
@@ -118,10 +118,9 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         return r
 
     def _putRequest(self, url, payloadJson, auth=None):
-        r = self._session.put(url, json=payloadJson, auth=auth, verify=False,
-                              headers={"Content-Type": "application/json"})
+        r = self._session.put(url, json=payloadJson, auth=auth, verify=False, headers={"Content-Type": "application/json"})
         if r.status_code != 200:
-            warnings.warn("There is an issue [code {}] with the request! {}".format(r.status_code, r))
+            warnings.warn("[pychiver:SaveRestore ENDPOINT] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
 
     def status(self):
@@ -129,12 +128,12 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
     def getSarItem(self, uniqueId) -> SARItem:
         if uniqueId is None:
-            raise ValueError('cannot search for None uniqueId!')
+            raise ValueError("cannot search for None uniqueId!")
         json_data_Node = self._getRequest(self.url_node.format(uniqueId))
         return self._fromNode_toSAR(json_data_Node)
 
-    def _fromNode_toSAR(self, json_data_Node ) -> SARItem:
-        uniqueId = json_data_Node['uniqueId']
+    def _fromNode_toSAR(self, json_data_Node) -> SARItem:
+        uniqueId = json_data_Node["uniqueId"]
         if json_data_Node["nodeType"] == "SNAPSHOT":
             json_data = self._getRequest(self.url_snapshot.format(uniqueId))
             # print('===== [ RAW SNAPSHOT data from the API] >>>')
@@ -157,7 +156,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         else:
             raise ValueError("Provided data is not a valid format! Maybe something wrong with the request type?")
 
-    def saveSarItem(self, sarItem: SARSnapshot|SARConfig, parentId=None, author=None):
+    def saveSarItem(self, sarItem: SARSnapshot | SARConfig, parentId=None, author=None):
         """
         following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
         :param sarItem:
@@ -165,23 +164,21 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         :param author:
         :return:
         """
-
-        # TODO check if item is not duplicate? (lists_pvs/ values)
+        # TODO might be that this one will need to be taken all the way out after new SR Roles come
         auth = HTTPBasicAuth(author, "12345678abcd")
 
         if isinstance(sarItem, SARConfig):
-            # print(self.url_config_put.format(parentId))
             configPayload = {
                 "configurationNode": {"userName": author, "name": sarItem.getName(), "description": sarItem.description, "type": "CONFIGURATION"},
                 "configurationData": {"pvList": [{"pvName": one.pvName} for one in sarItem.configList]},
-                # TODO include additional stuff
+                # TODO include additional stuff readback and readonly (see what format None/null True/true)
             }
-            # print(configPayload)
             result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload, auth=auth)
-            sarItem.uniqueId = json.loads(result.content)["configurationNode"]["uniqueId"]
+            if result.status_code == 200:
+                sarItem.dirty = False
+                sarItem.uniqueId = json.loads(result.content)["configurationNode"]["uniqueId"]
 
         elif isinstance(sarItem, SARSnapshot):
-            # print(self.url_snapshot_put.format(parentId))
             t = int(datetime.now().timestamp())
             snapPayload = {
                 "snapshotNode": {
@@ -210,11 +207,11 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             # print("===> Just Before Upload")
             # print(snapPayload)
             result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload, auth=auth)
-            # TODO update uniqueID
-            print(result)
-
+            if result.status_code == 200:
+                sarItem.dirty = False
+                sarItem.uniqueId = json.loads(result.content)["snapshotNode"]["uniqueId"]
         else:
-            raise NotImplementedError("Not implemented yet!")
+            raise NotImplementedError("Saving only for SARConfig/SARSnapshot!")
 
     def getCompositeSnapshotStub(self, uniqueId):
         a = self._getRequest(self.url_composite.format(uniqueId))
