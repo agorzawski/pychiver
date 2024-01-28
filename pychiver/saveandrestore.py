@@ -96,6 +96,9 @@ class SaveAndRestore:
         :param timeout: default 1,
         :return: a mutable snapshot object to be complemented with missing information and saved,
         """
+        if isinstance(base, SARSnapshot):
+            base = self.service.getParent(uniqueId=base.uniqueId)
+
         liveValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)  # TODO fix pyepics to p4p
         newLiveValues = {k: v for k, v in zip(base.getPVs(), liveValues)}
         if isinstance(base, SARConfig):
@@ -274,6 +277,7 @@ class SaveAndRestore:
         :param snapshot:
         :return:
         """
+        # TODO with the upcoming changes to SAR add additional flags to restore locally/remotely
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError("For restore an SARSnapshot is required!")
         try:

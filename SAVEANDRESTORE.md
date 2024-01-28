@@ -1,7 +1,5 @@
 # Examples *Save and Restore*
-> **NOTE**: Check `examples`, where interactive notebooks are.
->
-> **This is a prototype for the python service connection for save and restore service.**
+> Disclaimer: **This is a prototype for the python service connection for save and restore service. Use at your own risk**
 
 ## Service
 
@@ -11,38 +9,46 @@ from pychiver.saveandrestore import SaveAndRestore
 sar = SaveAndRestore()
 ```
 
-> Note: if no dedicated `service_url` will be provided a  `pychiver.instances.DEFAULT_SAVE_RESTORE` will be used.
+> there is `service_url` argument available, by default `pychiver.instances.DEFAULT_SAVE_RESTORE` is used.
 
 
-#### To get information of all nodes of given type:
+[//]: # (#### To get information of all nodes of given type:)
+
+[//]: # ()
+[//]: # (```python)
+
+[//]: # (configurationsNamesAndIds = sar.getAll&#40;&#41;)
+
+[//]: # (# returns a dict of NameOfConfig to Configuration &#40;default is NodeType.CONFIGURATION&#41;)
+
+[//]: # ()
+[//]: # (snapshotsNamesAndIds = sar.getAll&#40;nodeType=NodeType.SNAPSHOT&#41;)
+
+[//]: # (# returns a dict of SnapshotName to Snapshot definition)
+
+[//]: # (```)
+
+
+#### To get a specific configuration or snapshot:
 
 ```python
-configurationsNamesAndIds = sar.getAll()
-# returns a dict of NameOfConfig to Configuration (default is NodeType.CONFIGURATION)
-
-snapshotsNamesAndIds = sar.getAll(nodeType=NodeType.SNAPSHOT)
-# returns a dict of SnapshotName to Snapshot definition
-```
-
-#### To get all snapshots for a given configuration:
-
-```python
-sar.getSnapshots(configUniqueId='configUniqueId')
-# returns a dict of snapshot name to a snapshot objects
-```
-
-#### To get a specific snapshot:
-> NOTE: this call will raise `ValueError` if no snapshot is found!
-```python
+sar.getConfiguration(configId="1c5e67db-9b08-496f-85ec-8c1dc849e021")
 sar.getSnapshot(snapshotId='5314e53b-b7c1-432c-b996-0733f28fd15c')
 # returns a snapshot
 
+sar.getConfiguration(configName="blah")
 sar.getSnapshot(snapshotName='Some name of the snapshot')
 # returns a snapshot, if more than one found with the same name, it returns the most recent one.
 ```
+#### To get all snapshots for a given configuration:
+> To get _a real_ `configUniqueId` (or any `uniqueId`) one can use Phoebus App and copy/paste it from there
+```python
+sar.getSnapshots(configUniqueId='configUniqueId')
+# returns a dict of snapshot name to a SARSnapshot objects
+```
 
 ### Actions (read)
->  the following works for the `some_snapshot` being `SARSnapshot` or `SARVirtualSnapshot`
+>  the following works for the `some_snapshot` being `SARSnapshot` or `SARCompositeSnapshot`
 
 ##### Live values - detailed
 ```python
@@ -58,10 +64,12 @@ status = sar.compareAndCheck(snapshot=some_snapshot)
 
 ##### Archived values at given date:
 >**NOTE** the service needs to be started with the additional, not empty parameter `archiver_url`
+
 ```python
+from pychiver.instances import DEFAULT_ARCHIVER
 from pychiver.saveandrestore import SaveAndRestore
-sar = SaveAndRestore(service_url="http://jmasar.tn.esss.lu.se",
-                     archiver_url="'http://archiver-01.tn.esss.lu.se'")
+
+sar = SaveAndRestore(archiver_url=DEFAULT_ARCHIVER)
 
 status = sar.compare(snapshot=some_snapshot, date_time="2022-06-13 19:21:21")
 ```
@@ -95,48 +103,74 @@ syslog:> check state on: 2022-06-13 19:21:21
 20    MEBT-010:PwrC-PSQV-006:Cur-S          0.00          88.039
 21  MEBT-010:BMD-Chop-001:Field-SP       4500.00             NaN
 ```
-
-### Actions (read/create/interact)
-#### To restore:
+### Action to restore:
 
 > **NOTE** the restore (pvput) action is executed where the client package is running. **You may not have a privilege** (due to the network configuration) to successfully execute your call.
+
+>  the following works for the `some_snapshot` being `SARSnapshot` or `SARVirtualSnapshot`
+
 ```python
 status = sar.restore(snapshot=some_snapshot)
-#returns 0 if all restored, rises ValueError, EpicsError in case of problems
+#returns 0 if all restored, rises ValueError, EpicsError in case of issues
 ```
 
-***
+### Actions to create, take and/or interact
+> General  note: All snapshots created, taken and/or manipulated via the following have flag `dirty=True` to signal that they are NOT the service copy
+
+
+
 #### To create a virtual snapshot
-> **NOTE** WORK IN PROGRESS
+
 ```python
-vSnapshot = sar.createVirtualSnapshot(self, name, snapshots)
+from pychiver.sardomain import SarItemBuilder
+snapshots = [snapshot1, snapshot2]
+vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(self, name, snapshots)
 ```
 
-***
-#### To take/ save new snapshot:
-> **NOTE** WORK IN PROGRESS
+
+#### To create a config
 
 ```python
+from pychiver.sardomain import SarItemBuilder
 
-some_config = sar.createConfiguration(
+some_config = SarItemBuilder.getInstance().createConfiguration(
   sarConfigPVs=[SARConfigPV(pvName="SomePV1"),
                 SARConfigPV(pvName="SomePV2"),
                 SARConfigPV(pvName="SomePV3")],
   name="Configuration created via python",
   description="Some needed description")
 
-some_snapshot = sar.takeSnapshot()
-some_snapshot_retake = sar.takeSnapshot()
+```
+#### Take new snapshot:
+
+
+```python
+# live values
+some_snapshot_retake = sar.takeSnapshot(some_config,
+                                 newName="Values After setup",
+                                 newDescription="Feb2024")
+
+# or take with fixed values
+setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": 666.0,}
+some_snapshot = sar.takeSnapshot(some_config, setValues=setValues,
+                                 newName="Values From the DB",
+                                 newDescription="from the tests back on Nov2023")
 ```
 
-***
+> Note1: `setValues` does not have to be all PVs, in case manual one `setValue` is not provided
+> the one currently fetched from live epics is kept.
+
+
+
 #### To save them in the service:
 ```python
-sar.save(sarItem=some_config, paretnId='uniqueId')
+config = sar.save(sarItem=some_config, parentNodeId='<folder uniqueId>', author="joe foo")
 #or
-sar.save(sarItem=some_snapshot, paretnId='uniqueId')
+snapshot = sar.save(sarItem=some_snapshot, parentNodeId='configUniqueId', author="joe foo")
 ```
-> NOTE No virtual snapshots to be save now yet via this package
+> A succesfull save, updates the result with the correct `uniqueId` and sets `dirty=False`
+
+> No virtual snapshots to be saved  yet via this package, this is deferred WIP.
 
 ## Domain
 
