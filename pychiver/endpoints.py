@@ -132,7 +132,7 @@ class ExpectedDataSizeExceedsLimitError(Exception):
     def __str__(self):
         return (
             f"The expected datasize {self.expected_size} bytes exceeds the limit {self.limit}"
-            "bytes for pv {self.pv}. Set data_extraction_limit parameter to a higher value or None to force data extraction."
+            f"bytes for pv {self.pv}. Set data_extraction_limit parameter to a higher value or None to force data extraction."
         )
 
 
@@ -262,7 +262,8 @@ class EndPointArchiver(EndPoint):
         if info_type == PVMetaInfo.STATUS:
             returnData = status
         elif info_type == PVMetaInfo.CONFIGURATION:
-            warnings.warn("Warning: This may take some time, as all archive files will be scanned.")
+            warnings.warn("Checking {}/{}".format(DEFAULT_ARCHIVER_URL, git_config_id))
+            warnings.warn("Warning: This may take some time, as all .archive files will be scanned.")
             returnData = {}
             p = gitlab.Gitlab(DEFAULT_ARCHIVER_URL).projects.get(git_config_id)
             for pv in PV:
@@ -276,8 +277,6 @@ class EndPointArchiver(EndPoint):
         else:
             returnData = {}
             pvs = PV
-            if isinstance(PV, str):
-                pvs = [PV]
             for onePV in pvs:
                 if "Not" in status[onePV]["status"]:
                     returnData[onePV] = status[onePV]

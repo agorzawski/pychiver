@@ -92,7 +92,6 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
     def getCompositeSnapshotStub(self, uniqueId):
         a = requests.get(self.url_composite.format(uniqueId)).json()
-        print(a)
         json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
         json_data_Node["referencedSnapshotNodes"] = a["referencedSnapshotNodes"]
         return json_data_Node
@@ -101,24 +100,27 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         json_data = requests.get(self.service_url_root).json()
         return SARItem(**json_data)
 
-    def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.CONFIGURATION):
-        # TODO FIX it
-        if nodeType == NodeType.SNAPSHOT:
-            toReturn = []
+    def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.NONE, size=100):
+        # TODO add ?size=value in request or equivalent, unlikely olog default size param does not alter the returned objects
+        toReturn = []
+        if nodeType == NodeType.NONE:
+            for one in requests.get(self.url_snapshots).json():
+                toReturn.append(SARItem(**one))
+
+        elif nodeType == NodeType.VIRTUAL_SNAPSHOT:
+            for one in requests.get(self.url_snapshots).json():
+                if "COMPOSITE" in one["nodeType"]:
+                    toReturn.append(SARItem(**one))
+
+        elif nodeType == NodeType.SNAPSHOT:
             for one in requests.get(self.url_snapshots).json():
                 toReturn.append(self.getSnapshot(one["uniqueId"]))
-            return toReturn
+        else:
+            raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
 
-        # currentLevel = self.getChildren(uniqueId=uniqueId)
-        # if len(currentLevel):
-        #    for one in currentLevel:
-        #        currentPath = path + one["name"] + "/"
-        #        if one["nodeType"] == nodeType.name:
-        #            mainTree[SARFolder(fullPath=currentPath, uniqueId=one["uniqueId"], name=one["name"])] = SARConfig(**one)
-        #        self.getAllNodes(one["uniqueId"], mainTree, path=currentPath, nodeType=nodeType)
-        # else:
-        #    pass
-        raise NotImplementedError("Only Snapshots for now, Folders/Configs and Composite not yet!")
+        for one in toReturn:
+            mainTree[one.uniqueId] = one
+        return toReturn
 
     def getChildren(self, uniqueId=None, forcedTypeTuple=None):
         if uniqueId is None:
@@ -193,7 +195,7 @@ class SaveAndRestore:
         """
         raise NotImplementedError("Taking snapshots is not implement yet!")
 
-    def getSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARSnapshot:
+    def getSnapshot(self, snapshotId: str = None, snapshotName: str = None, sarItem: SARItem = None) -> SARSnapshot:
         """
         Returns one snapshot by provided unique ID
         :param snapshotName: individual snapshot name
@@ -201,16 +203,17 @@ class SaveAndRestore:
         :return: snapshot
         :raises ValueError if no snapshot found for the given snapshotId or snapshotName
         """
-        if snapshotName is not None and snapshotId is not None:
+        if snapshotName is not None and snapshotId is not None and sarItem is not None:
             raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
+        if sarItem is not None:
+            return self.service.getSnapshot(sarItem.uniqueId)
         if snapshotId is not None:
             try:
                 return self.service.getSnapshot(snapshotId)
-
             except JSONDecodeError:
                 warnings.warn("Something went wrong with finding the provided snapshotId='{}'".format(snapshotId))
         if snapshotName is not None:
-            allSnapshots = self.getAll(nodeType=NodeType.SNAPSHOT)
+            allSnapshots = self.getAll()
             # TODO add finding the last one
             for one in allSnapshots.values():
                 if snapshotName in one.name:
@@ -226,11 +229,16 @@ class SaveAndRestore:
         :return: a dict of SnapshotsName -> SARSnapshot
         """
         print("Getting available snapshots for config " + configUniqueId)
-        # TODO add full path to the snapshot key
-        # TODO add support for full configs
         # TODO add support for config names
-        # configFullPath =
-        allInParentConfig = self.service.getChildren(uniqueId=configUniqueId)
+
+        if config is not None and configUniqueId is not None:
+            raise ValueError("You need to providfe SARConfig or congfigUniqueId")
+
+        if not isinstance(config, SARConfig) and configUniqueId is None:
+            raise ValueError("Cannot find snapshots for not SARConfig")
+
+        uniqueId = configUniqueId if configUniqueId is not None else config.uniqueId
+        allInParentConfig = self.service.getChildren(uniqueId=uniqueId)
         toReturn = {}
         for one in allInParentConfig:
             toReturn[one["name"]] = self.service.getSnapshot(one["uniqueId"])
@@ -264,7 +272,7 @@ class SaveAndRestore:
         # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
         return SARVirtualSnapshot(uniqueId=uuid.uuid4(), name=name, snapshots=snapshots)
 
-    def getAll(self, useCache=False, nodeType=NodeType.CONFIGURATION) -> dict:
+    def getAll(self, useCache=False, nodeType=NodeType.NONE) -> dict:
         """
         Returns all configurations found in the system. If useCache is True, it retrieves it from the local file.
 
@@ -355,8 +363,8 @@ class SaveAndRestore:
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError("For restore an SARSnapshot is required!")
         try:
-            pvsToPut = [one["configPv"]["pvName"] for one in snapshot.snapshotConfigPVs]
-            valuesToPut = [one["value"]["value"] for one in snapshot.snapshotConfigPVs]
+            pvsToPut = [one.configPv["pvName"] for one in snapshot.getConfigPVs]
+            valuesToPut = [one.value["value"] for one in snapshot.getConfigPVs]
             self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)
         except Exception:
             warnings.warn("Something went wrong. Values not set.")

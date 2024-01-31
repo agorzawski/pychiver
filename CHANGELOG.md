@@ -1,3 +1,10 @@
+## 0.8.0 (WIP)
+- SaveRestore object updated - follow up of S&R API change in 2023,
+- Individual interpolation method when many aligned,
+- Fixing timestamps from nanos
+- use py-epicsarchiver as an endpoint and removed data extraction dependency on Json API now streamlined to protobuffer
+-
+
 ## 0.7.2
 - save restore time machine implemented (first version)
 - archiver has now additional argument to force earlier searches for the last value `.get(max_number_of_hours_back=24)`
