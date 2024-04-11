@@ -37,6 +37,8 @@ import os
 from datetime import datetime
 from abc import ABC, abstractmethod
 
+from .sardomain import _prep_snapshot_item
+
 
 class SaveAndRestoreEndPoint(ABC):
     """
@@ -201,18 +203,22 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                 },
                 "snapshotData": {
                     "snapshotItems": [
-                        {
-                            "configPv": {
-                                "pvName": o.pvName,
-                            },
-                            "value": {
-                                "type": {"name": "VDouble", "version": 1},
-                                "value": o.pvValue,
-                                "alarm": {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
-                                "time": {"unixSec": t, "nanoSec": 0},
-                                "display": {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
-                            },
-                        }
+                        # {
+                        #     "configPv": {
+                        #         "pvName": o.pvName,
+                        #     },
+                        #     "value": {
+                        #         "type": {"name": "VDouble", "version": 1}, # TODO fix that from the PV
+                        #         "value": o.pvValue,
+                        #         "alarm": {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+                        #         "time": {"unixSec": t, "nanoSec": 0},
+                        #         "display": {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+                        #         # TODO add the actual PVs info when fetchetd data -> include them in SnaphotItem
+                        #     },
+                        # }
+                        # TODO use _prep_snapshot_item from sar domain
+                        _prep_snapshot_item({"pvName": o.pvName}, o.pvValue, t,
+                                            pvType=o.pvType, alarm=o.pvAlarm, display=o.pvDisplay)
                         for o in sarItem.getConfigPVs
                     ]
                 },

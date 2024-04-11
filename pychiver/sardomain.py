@@ -296,12 +296,14 @@ def _append_config(rowsList, one: SARSnapshotItem):
     )
 
 
-def _prep_snapshot_item(configPv, pvValue, unixSec, nanoSec=0):
+def _prep_snapshot_item(configPv, pvValue, unixSec, nanoSec=0, pvType=None, alarm=None, display=None):
     return {
         "configPv": configPv,
         "value": {
+            "type": {"name": pvType if pvType is not None else "VDouble", "version": 1},
             "value": pvValue,
             "time": {"unixSec": unixSec, "nanoSec": nanoSec},
-            "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
+            "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NONE"},
+            "display": display if display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""} ,
         },
     }
