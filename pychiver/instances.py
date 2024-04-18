@@ -16,6 +16,7 @@ NIN_ARCHIVER_CONF = 6306  # Neutron Instruments Archiver Appliance Project ID
 
 # SAVE RESTORE
 SAVE_RESTORE = "http://jmasar.tn.esss.lu.se"
+SAVE_RESTORE_TEST = "http://jmasar-lab-02.cslab.esss.lu.se"
 DEFAULT_SAVE_RESTORE = SAVE_RESTORE
 
 DEFAULT_MAX_EXTRACTION_SIZE = 5000000  # 5 MB

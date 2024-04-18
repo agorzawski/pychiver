@@ -24,128 +24,17 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+import pandas
 import math
 from json import JSONDecodeError
-
-from .sardomain import *
+from .endpoints_sar import *
+from .sardomain import _prep_snapshot_item
 from .archiver import Archiver
-from .timeutils import getDateTimeObj
-
-import requests
+from .timeutils import getDateTimeObj, datetime, timedelta
+from .instances import DEFAULT_SAVE_RESTORE
 import epics
-import os
-import uuid
 import pickle
 import warnings
-from datetime import datetime, timedelta
-from .instances import DEFAULT_SAVE_RESTORE
-
-
-class SaveAndRestoreEndPoint:
-    """
-    An abstract class for the Save and Restore end point
-    """
-
-    def __init__(self, service_url=None):
-        if service_url is None:
-            raise ValueError(
-                "SaveAndRestore service URL was not provided nor set in the env. \
-                                Set SAVE_AND_RESTORE_URL in your env."
-            )
-        self.service_url = service_url
-
-
-class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
-    """
-    JMASAR EndPoint following the REST API exposed by the https://gitlab.esss.lu.se/ics-software/jmasar-service
-    """
-
-    def __init__(self, service_url=None):
-        if service_url is None:
-            service_url = os.getenv("SAVE_AND_RESTORE_URL", None)
-        super().__init__(service_url=service_url)
-        self.service_url_root = "{}/root".format(self.service_url)  # deprecated
-        self.url_config_snapshot = "{}/config/{{}}/snapshots".format(self.service_url)  # deprecated
-        self.url_config_items = "{}/snapshot/{{}}/items".format(self.service_url)  # deprecated
-
-        self.url_node = "{}/node/{{}}".format(self.service_url)
-        self.url_child = "{}/node/{{}}/children".format(self.service_url)
-        self.url_parent = "{}/node/{{}}/parent".format(self.service_url)
-        self.url_snapshot = "{}/snapshot/{{}}".format(self.service_url)
-        self.url_snapshots = "{}/snapshots".format(self.service_url)
-        self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
-        self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
-
-    def status(self):
-        print(self.__dict__)
-
-    def getSnapshot(self, uniqueId):
-        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
-        if json_data_Node["nodeType"] == "SNAPSHOT":
-            json_data = requests.get(self.url_snapshot.format(uniqueId)).json()
-            json_data["uniqueId"] = json_data_Node["uniqueId"]
-            json_data["name"] = json_data_Node["name"]
-            json_data["description"] = json_data_Node["description"]
-            return SARSnapshot(**json_data)
-        else:
-            return None
-
-    def getCompositeSnapshotStub(self, uniqueId):
-        a = requests.get(self.url_composite.format(uniqueId)).json()
-        json_data_Node = requests.get(self.url_node.format(uniqueId)).json()
-        json_data_Node["referencedSnapshotNodes"] = a["referencedSnapshotNodes"]
-        return json_data_Node
-
-    def getRoot(self):
-        json_data = requests.get(self.service_url_root).json()
-        return SARItem(**json_data)
-
-    def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.NONE, size=100):
-        # TODO add ?size=value in request or equivalent, unlikely olog default size param does not alter the returned objects
-        toReturn = []
-        if nodeType == NodeType.NONE:
-            for one in requests.get(self.url_snapshots).json():
-                toReturn.append(SARItem(**one))
-
-        elif nodeType == NodeType.VIRTUAL_SNAPSHOT:
-            for one in requests.get(self.url_snapshots).json():
-                if "COMPOSITE" in one["nodeType"]:
-                    toReturn.append(SARItem(**one))
-
-        elif nodeType == NodeType.SNAPSHOT:
-            for one in requests.get(self.url_snapshots).json():
-                toReturn.append(self.getSnapshot(one["uniqueId"]))
-        else:
-            raise NotImplementedError("Only Definitions of Snapshots&Composite, and Snapshots for now. No other types supported yet!")
-
-        for one in toReturn:
-            mainTree[one.uniqueId] = one
-        return toReturn
-
-    def getChildren(self, uniqueId=None, forcedTypeTuple=None):
-        if uniqueId is None:
-            raise ValueError("Cannot get search for None element! Provide unique ID!")
-        urlToGet = self.url_child.format(uniqueId)
-        if forcedTypeTuple is None:
-            return requests.get(urlToGet).json()
-        else:
-            toReturn = []
-            for one in requests.get(urlToGet).json():
-                if one is None:
-                    pass
-                if one["nodeType"] == forcedTypeTuple[0]:
-                    toReturn.append(forcedTypeTuple[1](**one))
-            return toReturn
-
-    def getParent(self, uniqueId=None):
-        if uniqueId is None:
-            raise ValueError("Cannot get search for None element! Provide unique ID!")
-        urlToGet = self.url_parent.format(uniqueId)
-        return requests.get(urlToGet).json()
-
-    def getItems(self, uniqueId):
-        r = requests.get(self.url_config_items.format(uniqueId))
-        return r.json()
 
 
 class SaveAndRestore:
@@ -159,7 +48,9 @@ class SaveAndRestore:
     Some parts may deserve to pushing towards the JSONSaveAndRestoreEndPoint implementation
     """
 
-    def __init__(self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, cacheFile=None, archiver_url: str = None):
+    def __init__(
+        self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, Epics=epics, cacheFile=None, archiver_url: str = None
+    ):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
 
@@ -171,9 +62,9 @@ class SaveAndRestore:
         :param DefaultImplementation: optional, default is JSONSaveAndRestoreEndPoint
         :param cacheFile: optional, default is False
         """
-        warnings.warn("This is a prototype, use with caution!")
+        warnings.warn("[pychiver:SaveRestore] This is a prototype, use with caution!")
         self.service = DefaultImplementation(service_url=service_url)
-        self.epics = epics
+        self.epics = Epics
         self.cachedConfigurations = {}
         self.cacheFile = None
         if cacheFile is not None:
@@ -181,23 +72,60 @@ class SaveAndRestore:
             try:
                 self.cachedConfigurations = pickle.load(open(cacheFile, "rb"))
             except:
-                print("No file {} found. Skipping loading from cache.".format(self.cacheFile))
+                warnings.warn("[pychiver:SaveRestore] No file {} found. " "Skipping loading from cache.".format(self.cacheFile))
         self._archiver = None
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
-    def takeSnapshot(self, config: SARConfig = None, snapshot: SARSnapshot = None) -> SARSnapshot:
+    def takeSnapshot(
+        self,
+        base: SARConfig | SARSnapshot,
+        setValues=None,
+        newName=None,
+        newDescription=None,
+        timeout=1,
+    ) -> SARSnapshot:
         """
-        Prepares a snapshot for a given config.
-        :param snapshot:
-        :param config:
-        :return: a mutable snapshot object to be complemented with missing information and saved
+        Takes a snapshot for a given config or retakes for the existing snapshot.
+        Can be updated with the additionally provided Pv->Value as setValues
+        :param setValues: default None (i.e. live values from EPICS will be fetched), should be provided in form of
+                    a dict of {PVName -> value}. In case setValue is not provided
+        :param base: can be SARConfig or a SARSnapshot,
+        :param newDescription: description of the snapshot to take,
+        :param newName: name of the snapshot to take,
+        :param timeout: default 1,
+        :return: a mutable snapshot object to be complemented with missing information and saved,
         """
-        raise NotImplementedError("Taking snapshots is not implement yet!")
+        if isinstance(base, SARSnapshot):
+            base = self.service.getParent(uniqueId=base.uniqueId)
+
+        liveValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)  # TODO fix pyepics to p4p
+        newLiveValues = {k: v for k, v in zip(base.getPVs(), liveValues)}
+        if isinstance(base, SARConfig):
+            if setValues is None:
+                setValues = newLiveValues
+            snap = {
+                "uniqueId": -1,
+                "dirty": True,
+                "name": newName,
+                "description": newDescription,
+                "snapshotItems": [
+                    _prep_snapshot_item(
+                        o.get(),
+                        setValues.get(o.pvName, newLiveValues.get(o.pvName)),
+                        int(datetime.now().timestamp()),
+                    )
+                    for o in base.configList
+                ],
+            }
+            return SARSnapshot(**snap)
+        else:
+            raise NotImplementedError("Taking snapshots ONLY from the SarConfig for now (Work in Progress)!")
 
     def getSnapshot(self, snapshotId: str = None, snapshotName: str = None, sarItem: SARItem = None) -> SARSnapshot:
         """
-        Returns one snapshot by provided unique ID
+        Returns one snapshot from the service selected by a provided unique ID
+        :param sarItem: already existing object
         :param snapshotName: individual snapshot name
         :param snapshotId: individual snapshot ID
         :return: snapshot
@@ -205,20 +133,19 @@ class SaveAndRestore:
         """
         if snapshotName is not None and snapshotId is not None and sarItem is not None:
             raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
-        if sarItem is not None:
-            return self.service.getSnapshot(sarItem.uniqueId)
+        if sarItem is not None and not sarItem.dirty:
+            return self.service.getSarItem(sarItem.uniqueId)
         if snapshotId is not None:
             try:
-                return self.service.getSnapshot(snapshotId)
+                return self.service.getSarItem(snapshotId)
             except JSONDecodeError:
-                warnings.warn("Something went wrong with finding the provided snapshotId='{}'".format(snapshotId))
+                warnings.warn("[pychiver:SaveRestore] Something went wrong with finding " "the provided snapshotId='{}'".format(snapshotId))
         if snapshotName is not None:
             allSnapshots = self.getAll()
-            # TODO add finding the last one
             for one in allSnapshots.values():
                 if snapshotName in one.name:
                     return self.getSnapshot(snapshotId=one.uniqueId)
-        raise ValueError("Cannot find the snapshot for a provided snapshotId or snapshotName")
+        raise ValueError("Cannot find the snapshot for a provided snapshotId or snapshotName '{}'".format(snapshotName))
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
@@ -228,11 +155,9 @@ class SaveAndRestore:
         :param configUniqueId:
         :return: a dict of SnapshotsName -> SARSnapshot
         """
-        print("Getting available snapshots for config " + configUniqueId)
-        # TODO add support for config names
 
         if config is not None and configUniqueId is not None:
-            raise ValueError("You need to providfe SARConfig or congfigUniqueId")
+            raise ValueError("You need to provide SARConfig or congfigUniqueId")
 
         if not isinstance(config, SARConfig) and configUniqueId is None:
             raise ValueError("Cannot find snapshots for not SARConfig")
@@ -241,41 +166,35 @@ class SaveAndRestore:
         allInParentConfig = self.service.getChildren(uniqueId=uniqueId)
         toReturn = {}
         for one in allInParentConfig:
-            toReturn[one["name"]] = self.service.getSnapshot(one["uniqueId"])
+            toReturn[one["name"]] = self.service.getSarItem(one["uniqueId"])
         return toReturn
 
-    def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARVirtualSnapshot:
+    def getSnapshotLocation(self, snapshot: SARSnapshot) -> tuple[SARFolder | SARConfig]:
+        parentConfig = self.service.getParent(uniqueId=snapshot.uniqueId)
+        deepestFolder = self.service.getParent(uniqueId=parentConfig.uniqueId)
+        return deepestFolder, parentConfig
+
+    def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARCompositeSnapshot:
         """
         :return: a virtual snapshot
         """
         json = self.service.getCompositeSnapshotStub(snapshotId)
         snapshots = []
         for oneSnapshotId in json["referencedSnapshotNodes"]:
-            a = self.service.getSnapshot(oneSnapshotId)
+            a = self.service.getSarItem(oneSnapshotId)
             if isinstance(a, SARSnapshot):
                 snapshots.append(a)
             else:
                 aInception = self.getCompositeSnapshot(oneSnapshotId)
                 for oneS in aInception.getSnapshots():
                     snapshots.append(oneS)
-        return SARVirtualSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
+        return SARCompositeSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
 
-    def createVirtualSnapshot(self, name, snapshots) -> SARVirtualSnapshot:
+    def getAll(self, useCache=False, nodeType=NodeType.SNAPSHOT) -> dict[str | SARSnapshot]:
         """
-        From the provided snapshots it creates a virtual one, that combines the source.
-        Returns a non editable bundle, that can be treated similarly like other snapshots, e.g. compare or restore.
-        :param name: An unique name to add
-        :param snapshots: a list of snapshots (SARSnapshot)
-        :return: a virtual snapshot
-        """
-        # TODO add creation check process support
-        # TODO add save to the service (ONCE THE UNDERLYING OBJECTS ARE AVAILABLE)
-        return SARVirtualSnapshot(uniqueId=uuid.uuid4(), name=name, snapshots=snapshots)
+        Returns all snapshots found in the system. If useCache is True, it retrieves it from the local file.
 
-    def getAll(self, useCache=False, nodeType=NodeType.NONE) -> dict:
-        """
-        Returns all configurations found in the system. If useCache is True, it retrieves it from the local file.
-
+        :param nodeType: default SNAPSHOT
         :param useCache: optional, default False
         :return:
         """
@@ -285,13 +204,16 @@ class SaveAndRestore:
             self._updateCache(configurations)
             return configurations
         else:
-            print(self.cachedConfigurations)
+            # print(self.cachedConfigurations)
             return self.cachedConfigurations
 
-    def getConfiguration(self, name=None) -> SARConfig:
+    def getConfiguration(self, configId: str = None, name: str = None) -> SARConfig:
         # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
-        # this has also a TODO on the https://gitlab.esss.lu.se/ics-software/jmasar-service
-        raise NotImplementedError("Not implemented yet!")
+        # this has also a dedicated task the https://gitlab.esss.lu.se/ics-software/jmasar-service
+        item = self.service.getSarItem(configId)
+        if isinstance(item, SARConfig):
+            return item
+        raise ValueError("Given UniqueId {} is not for the configuration.".format(configId))
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
@@ -323,26 +245,27 @@ class SaveAndRestore:
         """
         df = snapshot.getStoredValues()
         if date_time is None:
-            # TODO add some comperror support
-            values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)  # TODO check order PVs
+            # TODO add some comparator support
+            # TODO fix pyepics to p4p
+            values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)
             df["live_value"] = values
             df["archived_value"] = math.nan
             try:
                 df["delta"] = df["stored_value"] - df["live_value"]
             except:
-                warnings.warn("Some error occurred during the delta calculation, skipping")
+                warnings.warn("[pychiver:SaveRestore] Some error occurred during the delta calculation, skipping")
 
         if isinstance(date_time, datetime) or isinstance(date_time, str):
             if self._archiver is None:
                 raise ValueError("Service not instantiated with the archiver link. Cannot perform that action!")
             date_time_to_consider = getDateTimeObj(date_time)
-            print(date_time_to_consider)
+            # print(date_time_to_consider)
             startD = date_time_to_consider - timedelta(seconds=1)  # TODO archiver window to consider?
             endD = date_time_to_consider + timedelta(seconds=1)
             data = self._archiver.get(snapshot.getPVs(), start_date=startD, end_date=endD)
-            print("=======")
-            print(data)
-            print("=======")
+            # print("=======")
+            # print(data)
+            # print("=======")
             df["live_value"] = math.nan
             values = []
             for one in snapshot.getPVs():
@@ -360,19 +283,46 @@ class SaveAndRestore:
         :param snapshot:
         :return:
         """
+        # TODO with the upcoming changes to SAR add additional flags to restore locally/remotely
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError("For restore an SARSnapshot is required!")
         try:
             pvsToPut = [one.configPv["pvName"] for one in snapshot.getConfigPVs]
             valuesToPut = [one.value["value"] for one in snapshot.getConfigPVs]
-            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)
+            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)  # TODO fix pyepics to p4p
         except Exception:
-            warnings.warn("Something went wrong. Values not set.")
+            warnings.warn("[pychiver:SaveRestore] Something went wrong. Values were not set.")
+            return 1
         return 0
 
-    def save(self, config: SARConfig = None, snapshot: SARSnapshot = None, newName=None, nodeType=NodeType.SNAPSHOT):
-        # TODO to be implemented, to be found in the REST Api how to do it
-        raise NotImplementedError("Not implemented yet!")
+    def save(self, sarItem: SARConfig | SARSnapshot, parentNodeId=None, author=None):
+        """
+        Saves the locally created object to the service.
+        :param sarItem:
+        :param parentNodeId:
+        :param author:
+        :return:
+        """
+        if author is None:
+            raise ValueError("cannot save without knowing who the author is...")
+
+        if isinstance(sarItem, SARConfig) and parentNodeId is None:
+            raise ValueError("Cannot save Config without a parent!")
+
+        if isinstance(sarItem, SARSnapshot) and parentNodeId is None:
+            parentNodeId = self.service.getParent(sarItem.uniqueId).uniqueId
+
+        if isinstance(sarItem, SARSnapshot) and parentNodeId is not None and not sarItem.dirty:
+            realParentId = self.service.getParent(sarItem.uniqueId).uniqueId
+            if realParentId != parentNodeId:
+                warnings.warn(
+                    "[pychiver:SaveRestore] Given element parent's code ({}) "
+                    "does not match the one given in the argument ({}), "
+                    "using the actual parent code!".format(realParentId, parentNodeId)
+                )
+                parentNodeId = realParentId
+
+        self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, author=author)
 
     def _updateCache(self, newConfiguration):
         import copy
