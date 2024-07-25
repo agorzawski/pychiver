@@ -117,7 +117,7 @@ def alignDataFrames(dict_of_datasets, time_base=None, InterpolationStrategyImpl=
         if one_PV in dfToSkip:
             continue
         for one_val_column in value_columns:
-            config.printVerbose(f"Interpolating for {one_PV}:{one_val_column}")
+            config.printVerbose(f"Interpolating for {one_PV}: {one_val_column}")
             x = isImpl[index].getValues(dict_of_datasets[one_PV][time_column].to_numpy(), dict_of_datasets[one_PV][one_val_column].to_numpy())
             newDF_values.append(x)
     config.printVerbose("Alignment completed!")
