@@ -1,7 +1,7 @@
 import unittest
 
 from pychiver.saveandrestore import *
-from pychiver.sardomain import _prep_snapshot_item
+from pychiver.sardomain import _prep_snapshot_item_for_json
 
 AUTHOR = "someguy"
 UID_CONFIG = "U1"
@@ -23,7 +23,7 @@ SNAPSHOT_1 = SARSnapshot(
     uniqueId=UID_SNAPSHOT_1,
     name=NAME_SNAPSHOT_1,
     snapshotItems=[
-        _prep_snapshot_item(
+        _prep_snapshot_item_for_json(
             o.get(),
             SNAP_1_VALUES.get(o.pvName),
             0,
@@ -37,7 +37,7 @@ SNAPSHOT_2 = SARSnapshot(
     uniqueId=UID_SNAPSHOT_2,
     name=NAME_SNAPSHOT_2,
     snapshotItems=[
-        _prep_snapshot_item(
+        _prep_snapshot_item_for_json(
             o.get(),
             SNAP_2_VALUES.get(o.pvName),
             0,

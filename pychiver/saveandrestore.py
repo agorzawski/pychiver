@@ -28,7 +28,7 @@ import pandas
 import math
 from json import JSONDecodeError
 from .endpoints_sar import *
-from .sardomain import _prep_snapshot_item
+from .sardomain import _prep_snapshot_item_for_json
 from .archiver import Archiver
 from .timeutils import getDateTimeObj, datetime, timedelta
 from .instances import DEFAULT_SAVE_RESTORE
@@ -49,7 +49,10 @@ class SaveAndRestore:
     """
 
     def __init__(
-        self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, Epics=epics, cacheFile=None, archiver_url: str = None
+        self, service_url: str = DEFAULT_SAVE_RESTORE,
+            DefaultImplementation=JSONSaveAndRestoreEndPoint,
+            username=None, password=None,
+            Epics=epics, cacheFile=None, archiver_url: str = None
     ):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
@@ -58,12 +61,15 @@ class SaveAndRestore:
         If local file will not be found, the first time user will call getConfigurations() a local file will be created.
 
         :param service_url: required, an url for the service
+        :param username: username for performing editing actions (i.e. creates). None, for read only.
+        :param password: relevant password, None for read only
         :param archiver_url: optional, url for Archiver service, for comparisons
         :param DefaultImplementation: optional, default is JSONSaveAndRestoreEndPoint
         :param cacheFile: optional, default is False
         """
         warnings.warn("[pychiver:SaveRestore] This is a prototype, use with caution!")
-        self.service = DefaultImplementation(service_url=service_url)
+        self._username = username
+        self.service = DefaultImplementation(service_url=service_url, username=username, password=password)
         self.epics = Epics
         self.cachedConfigurations = {}
         self.cacheFile = None
@@ -77,6 +83,11 @@ class SaveAndRestore:
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
+    def authenticate(self, username=None, password=None):
+        if username is not None and password is not None:
+            self._username = username
+            self.service.authenticate(username=username, password=password)
+
     def takeSnapshot(
         self,
         base: SARConfig | SARSnapshot,
@@ -88,8 +99,8 @@ class SaveAndRestore:
         """
         Takes a snapshot for a given config or retakes for the existing snapshot.
         Can be updated with the additionally provided Pv->Value as setValues
-        :param setValues: default None (i.e. live values from EPICS will be fetched), should be provided in form of
-                    a dict of {PVName -> value}. In case setValue is not provided
+        :param setValues: optional, default None (i.e. live values from EPICS will be fetched), should be provided in
+        a form of a dict of {PVName -> value}.
         :param base: can be SARConfig or a SARSnapshot,
         :param newDescription: description of the snapshot to take,
         :param newName: name of the snapshot to take,
@@ -110,7 +121,7 @@ class SaveAndRestore:
                 "name": newName,
                 "description": newDescription,
                 "snapshotItems": [
-                    _prep_snapshot_item(
+                    _prep_snapshot_item_for_json(
                         o.get(),
                         setValues.get(o.pvName, newLiveValues.get(o.pvName)),
                         int(datetime.now().timestamp()),
@@ -295,16 +306,18 @@ class SaveAndRestore:
             return 1
         return 0
 
-    def save(self, sarItem: SARConfig | SARSnapshot, parentNodeId=None, author=None):
+    def save(self, sarItem: SARConfig | SARSnapshot | SARFolder, parentNodeId=None):
         """
         Saves the locally created object to the service.
-        :param sarItem:
-        :param parentNodeId:
-        :param author:
+
+        NOTE: This requires to have an authenticated instance!
+
+        :param sarItem: The SaveRestore Object to persist in the service. Now supported Folders/Configs/Snapshots
+        :param parentNodeId: The uniqueId of the parent node (folder/configuration)
         :return:
         """
-        if author is None:
-            raise ValueError("cannot save without knowing who the author is...")
+        if self._username is None:
+            raise ValueError("Cannot save without authenticated username!")
 
         if isinstance(sarItem, SARConfig) and parentNodeId is None:
             raise ValueError("Cannot save Config without a parent!")
@@ -322,7 +335,7 @@ class SaveAndRestore:
                 )
                 parentNodeId = realParentId
 
-        self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, author=author)
+        self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId)
 
     def _updateCache(self, newConfiguration):
         import copy

@@ -104,7 +104,7 @@ status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of issues
 ```
 
-### Actions to create, take and/or interact
+### Actions to create, take and/or interact (authentication needed!)
 > General  note: All snapshots created, taken and/or manipulated via the following have flag `dirty=True` to signal that they are NOT the service copy
 
 
@@ -124,10 +124,10 @@ vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(self, name, snaps
 from pychiver.sardomain import SarItemBuilder
 
 some_config = SarItemBuilder.getInstance().createConfiguration(
-  sarConfigPVs=[SARConfigPV(pvName="SomePV1"),
+  sarConfigPVs=[SARConfigPV(pvName="SomePV1", readbackPvName="SomePV1-RB")),
                 SARConfigPV(pvName="SomePV2"),
                 SARConfigPV(pvName="SomePV3")],
-  name="Configuration created via python",
+  name="Configuration created via python package",
   description="Some needed description")
 
 ```
@@ -142,7 +142,8 @@ some_snapshot_retake = sar.takeSnapshot(some_config,
 
 # or take with fixed values
 setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": 666.0,}
-some_snapshot = sar.takeSnapshot(some_config, setValues=setValues,
+some_snapshot = sar.takeSnapshot(some_config, 
+                                 setValues=setValues, # if this optional argument is not given, live values are used!
                                  newName="Values From the DB",
                                  newDescription="from the tests back on Nov2023")
 ```
@@ -153,12 +154,24 @@ some_snapshot = sar.takeSnapshot(some_config, setValues=setValues,
 
 
 #### To save them in the service:
+
+> Note: to interact with the service, one needs to authenticate:
 ```python
-config = sar.save(sarItem=some_config, parentNodeId='<folder uniqueId>', author="joe foo")
-#or
-snapshot = sar.save(sarItem=some_snapshot, parentNodeId='configUniqueId', author="joe foo")
+sar = SaveAndRestore(username="somename", password="somepass")
+
+# or if you have an instance running
+
+sar.authenticate(username="somename", password="somepass")
 ```
-> A succesfull save, updates the result with the correct `uniqueId` and sets `dirty=False`
+
+```python
+folder = sar.save(sarItem=some_folder, parentNodeId='<folder uniqueId>')
+#or
+config = sar.save(sarItem=some_config, parentNodeId='<folder uniqueId>')
+#or
+snapshot = sar.save(sarItem=some_snapshot, parentNodeId='configUniqueId')
+```
+> A successful save, updates the result with the correct `uniqueId` and sets `dirty=False`
 
 > No virtual snapshots to be saved  yet via this package, this is deferred WIP.
 

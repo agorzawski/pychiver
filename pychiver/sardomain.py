@@ -60,7 +60,9 @@ class SARFolder(SARItem):
         super().__init__(**kwargs)
         if kwargs.get("fullPath", None) is None:
             raise ValueError("Cannot initialise SARFolder object without path!")
+        self.name = kwargs.get("name")
         self.fullPath = kwargs.get("fullPath")
+        self.nodeType = NodeType.FOLDER
 
     def getFullPath(self) -> str:
         return self.fullPath
@@ -74,7 +76,7 @@ class SARConfig(SARItem):
     SAR item dedicated for a configuration
     """
 
-    # TODO fix duplication: configList vs pvList. pVList (native as comes to kwargs, make it unavailable) and
+    # FIXME duplication: configList vs pvList. pVList (native as comes to kwargs, make it unavailable) and
     #  configList (proper Objects should be default)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -115,8 +117,11 @@ class SARSnapshotItem(SARConfigPV):
         super().__init__(**kwargs)
         if kwargs.get("value", None) is not None:
             self.__dict__ = kwargs
-            self.pvName = self.configPv["pvName"]  # TODO somehow does not work from the super class
+            self.pvName = self.configPv["pvName"]
             self.pvValue = self.value["value"]
+            self.pvType = None
+            self.pvAlarm = None
+            self.pvDisplay = None
         else:
             raise ValueError("No value given")
 
@@ -171,7 +176,7 @@ class SARSnapshot(SARItem):
         return list([o.configPv.get("pvName", []) for o in self.configPVs])
 
     @property
-    def getConfigPVs(self) -> list:
+    def getConfigPVs(self) -> list[SARSnapshotItem]:
         return self.configPVs
 
     def getStoredValues(self) -> pd.DataFrame:
@@ -206,7 +211,6 @@ class SARCompositeSnapshot(SARItem):
         for one in kwargs.get("snapshots"):
             if not isinstance(one, SARSnapshot):
                 raise ValueError("One of the provided snapshots is not a Snapshot!")
-                # TODO maybe just skip?
 
             # TODO impose PV checks for double definitions, merging strtegy etc...
             # provide a callback
@@ -217,8 +221,7 @@ class SARCompositeSnapshot(SARItem):
         return base
 
     def getSnapshots(self):
-        # TODO make sure this will be not mutable (later, once ProofOfConcept done)
-        return self.snapshots
+        return [s for s in self.snapshots]
 
     def getPVs(self) -> list:
         combinedList = []
@@ -258,6 +261,9 @@ class SarItemBuilder:
         new_instance = cls()
         return new_instance
 
+    def createFolder(self, name: str, description: str,) -> SARFolder:
+        return SARFolder(uniqueId=self.DIRTY_SAR_ITEM, name=name, description=description, dirty=True, fullPath=self.DIRTY_SAR_ITEM)
+
     def createConfiguration(self, name: str, description: str, sarConfigPVs: list[SARConfigPV]) -> SARConfig:
         """
         :param name: A unique name of the configuration
@@ -296,14 +302,14 @@ def _append_config(rowsList, one: SARSnapshotItem):
     )
 
 
-def _prep_snapshot_item(configPv, pvValue, unixSec, nanoSec=0, pvType=None, alarm=None, display=None):
+def _prep_snapshot_item_for_json(configPv, pvValue, unixSec, nanoSec=0, pvType=None, alarm=None, display=None):
     return {
         "configPv": configPv,
         "value": {
-            "type": {"name": pvType if pvType is not None else "VDouble", "version": 1},
+            "type": {"name": pvType if pvType is not None else "VDouble", "version": 1},  # TODO fix type from the PV
             "value": pvValue,
             "time": {"unixSec": unixSec, "nanoSec": nanoSec},
             "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NONE"},
-            "display": display if display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""} ,
+            "display": display if display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
         },
     }
