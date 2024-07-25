@@ -71,7 +71,7 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
             mainTree[one.uniqueId] = one
         return toReturn
 
-    def __init__(self, service_url=None):
+    def __init__(self, service_url=None, username=None, password=None):
         super().__init__(service_url=service_url)
 
     def getSarItem(self, uniqueId) -> SARItem:
@@ -82,7 +82,7 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
         if UID_SNAPSHOT_2 in uniqueId:
             return SNAPSHOT_2
 
-    def saveSarItem(self, sarItem: SARItem, parentId=None, author=None):
+    def saveSarItem(self, sarItem: SARItem, parentId=None):
         # for this class it just accepts as is, no issues on the service side
         pass
 
@@ -98,7 +98,7 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
 
 class TestSARService(unittest.TestCase):
     def setUp(self):
-        self.sar = SaveAndRestore(service_url="TEST", DefaultImplementation=MockUpEndpoint, Epics=MockUpEpics())
+        self.sar = SaveAndRestore(service_url="TEST", DefaultImplementation=MockUpEndpoint, Epics=MockUpEpics(), username=AUTHOR, password="testPass")
 
     def test_get_config(self):
         snap1 = self.sar.getSnapshot(snapshotId=UID_CONFIG)
@@ -140,19 +140,19 @@ class TestSARService(unittest.TestCase):
 
     def test_saveConfig_no_parent(self):
         with self.assertRaises(ValueError):
-            self.sar.save(CONFIG, author=AUTHOR)
+            self.sar.save(CONFIG)
 
     def test_saveConfig(self):
-        self.sar.save(CONFIG, parentNodeId="SomeExistingFolder", author=AUTHOR)
+        self.sar.save(CONFIG, parentNodeId="SomeExistingFolder")
 
     def test_saveSnapshot_no_parent(self):
-        self.sar.save(SNAPSHOT_1, author=AUTHOR)
+        self.sar.save(SNAPSHOT_1)
 
     def test_saveSnapshot_correct_parent(self):
-        self.sar.save(SNAPSHOT_1, parentNodeId=UID_CONFIG, author=AUTHOR)
+        self.sar.save(SNAPSHOT_1, parentNodeId=UID_CONFIG)
 
     def test_saveSnapshot_incorrect_parent_corrected(self):
-        self.sar.save(SNAPSHOT_1, parentNodeId="blah", author=AUTHOR)
+        self.sar.save(SNAPSHOT_1, parentNodeId="blah")
 
 
 if __name__ == "__main__":
