@@ -142,7 +142,7 @@ some_snapshot_retake = sar.takeSnapshot(some_config,
 
 # or take with fixed values
 setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": 666.0,}
-some_snapshot = sar.takeSnapshot(some_config, 
+some_snapshot = sar.takeSnapshot(some_config,
                                  setValues=setValues, # if this optional argument is not given, live values are used!
                                  newName="Values From the DB",
                                  newDescription="from the tests back on Nov2023")

@@ -49,10 +49,14 @@ class SaveAndRestore:
     """
 
     def __init__(
-        self, service_url: str = DEFAULT_SAVE_RESTORE,
-            DefaultImplementation=JSONSaveAndRestoreEndPoint,
-            username=None, password=None,
-            Epics=epics, cacheFile=None, archiver_url: str = None
+        self,
+        service_url: str = DEFAULT_SAVE_RESTORE,
+        DefaultImplementation=JSONSaveAndRestoreEndPoint,
+        username=None,
+        password=None,
+        Epics=epics,
+        cacheFile=None,
+        archiver_url: str = None,
     ):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.

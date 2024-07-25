@@ -261,7 +261,11 @@ class SarItemBuilder:
         new_instance = cls()
         return new_instance
 
-    def createFolder(self, name: str, description: str,) -> SARFolder:
+    def createFolder(
+        self,
+        name: str,
+        description: str,
+    ) -> SARFolder:
         return SARFolder(uniqueId=self.DIRTY_SAR_ITEM, name=name, description=description, dirty=True, fullPath=self.DIRTY_SAR_ITEM)
 
     def createConfiguration(self, name: str, description: str, sarConfigPVs: list[SARConfigPV]) -> SARConfig:

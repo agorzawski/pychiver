@@ -126,19 +126,14 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
     def _postRequest(self, url, payloadJson):
         r = self._session.post(url, files=payloadJson, verify=False)
         if r.status_code != 200:
-            warnings.warn(
-                "[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(
-                    r.status_code, r.content))
+            warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
 
     def _putRequest(self, url, payloadJson, auth=None):
         print("PUT: ", payloadJson)
-        r = self._session.put(url, json=payloadJson, auth=auth, verify=False,
-                              headers={"Content-Type": "application/json"})
+        r = self._session.put(url, json=payloadJson, auth=auth, verify=False, headers={"Content-Type": "application/json"})
         if r.status_code != 200:
-            warnings.warn(
-                "[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(
-                    r.status_code, r.content))
+            warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
 
     def status(self):
@@ -193,9 +188,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         :return:
         """
         if isinstance(sarItem, SARFolder):
-            folderPayload = {
-                "userName": self._username, "name": sarItem.getName(),
-                "description": sarItem.description, "type": sarItem.getType()}
+            folderPayload = {"userName": self._username, "name": sarItem.getName(), "description": sarItem.description, "type": sarItem.getType()}
             result = self._putRequest(url=self.url_node_put.format(parentId), payloadJson=folderPayload)
             if result.status_code == 200:
                 sarItem.dirty = False
@@ -205,11 +198,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
         elif isinstance(sarItem, SARConfig):
             configPayload = {
-                "configurationNode": {"userName": self._username, "name": sarItem.getName(),
-                                      "description": sarItem.description, "type": sarItem.getType()},
-                "configurationData": {"pvList": [{"pvName": one.pvName,
-                                                  "readbackPvName": one.readbackPvName,
-                                                  "readOnly": one.readonly} for one in sarItem.configList]},
+                "configurationNode": {"userName": self._username, "name": sarItem.getName(), "description": sarItem.description, "type": sarItem.getType()},
+                "configurationData": {
+                    "pvList": [{"pvName": one.pvName, "readbackPvName": one.readbackPvName, "readOnly": one.readonly} for one in sarItem.configList]
+                },
             }
             result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload)
             if result.status_code == 200:
@@ -226,12 +218,12 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     "nodeType": sarItem.getType(),
                 },
                 "snapshotData": {
-                    "snapshotItems": [_prep_snapshot_item_for_json({"pvName": o.pvName},
-                                                                   o.pvValue,
-                                                                   int(datetime.now().timestamp()),
-                                                                   pvType=o.pvType, alarm=o.pvAlarm, display=o.pvDisplay)
-                                      for o in sarItem.getConfigPVs
-                                      ]
+                    "snapshotItems": [
+                        _prep_snapshot_item_for_json(
+                            {"pvName": o.pvName}, o.pvValue, int(datetime.now().timestamp()), pvType=o.pvType, alarm=o.pvAlarm, display=o.pvDisplay
+                        )
+                        for o in sarItem.getConfigPVs
+                    ]
                 },
             }
             result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload)
