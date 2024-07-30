@@ -21,6 +21,7 @@ setuptools.setup(
         "matplotlib",
         "numpy",
         "p4p",
+        "pyepics",
         "python-gitlab",
         "py-epicsarchiver>=0.5",
     ],
