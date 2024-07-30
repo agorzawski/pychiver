@@ -36,8 +36,6 @@ import os
 from datetime import datetime
 from abc import ABC, abstractmethod
 
-from .sardomain import _prep_snapshot_item_for_json
-
 
 class SaveAndRestoreEndPoint(ABC):
     """
@@ -110,6 +108,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         if username is not None and password is not None:
             self._username = username
             self._session.auth = (username, password)
+        else:
+            warnings.warn("[pychiver:SaveRestoreService] No user/password authenticated. Running in the ReadOnlyMode")
         retry = Retry(connect=5, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
         self._session.mount("https://", adapter)
@@ -216,14 +216,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     "userName": self._username,
                     "nodeType": sarItem.getType(),
                 },
-                "snapshotData": {
-                    "snapshotItems": [
-                        _prep_snapshot_item_for_json(
-                            {"pvName": o.pvName}, o.pvValue, int(datetime.now().timestamp()), pvType=o.pvType, alarm=o.pvAlarm, display=o.pvDisplay
-                        )
-                        for o in sarItem.getConfigPVs
-                    ]
-                },
+                "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in sarItem.getConfigPVs]},
             }
             result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload)
             if result.status_code == 200:

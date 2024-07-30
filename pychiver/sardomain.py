@@ -119,14 +119,30 @@ class SARSnapshotItem(SARConfigPV):
             self.__dict__ = kwargs
             self.pvName = self.configPv["pvName"]
             self.pvValue = self.value["value"]
-            self.pvType = None
-            self.pvAlarm = None
-            self.pvDisplay = None
+            self.type = kwargs.get("value", {}).get("type", None)
+            self.alarm = kwargs.get("value", {}).get("alarm", None)
+            self.display = kwargs.get("value", {}).get("display", None)
+            self.enum = kwargs.get("value", {}).get("enum", None)
         else:
             raise ValueError("No value given")
 
     def __repr__(self):
         return "{} / {}".format(self.pvName, self.pvValue)
+
+    def toJson(self, unixSec, nanoSec):
+        toReturn = {
+            "configPv": self.configPv,
+            "value": {
+                "value": self.pvValue,
+                "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+                "type": self.type if self.type is not None else {"name": "VDouble", "version": 1},
+                "alarm": self.alarm if self.alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+                "display": self.display if self.display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+            },
+        }
+        if self.enum is not None:
+            toReturn["value"]["enum"] = self.enum
+        return toReturn
 
 
 class SARSnapshot(SARItem):
@@ -306,14 +322,27 @@ def _append_config(rowsList, one: SARSnapshotItem):
     )
 
 
-def _prep_snapshot_item_for_json(configPv, pvValue, unixSec, nanoSec=0, pvType=None, alarm=None, display=None):
-    return {
+def _prep_input_for_snapshot_item(configPv, pvValue, unixSec, nanoSec=0, pvType=None, alarm=None, display=None, enumOptions=None, verb=None):
+    toReturn = {
         "configPv": configPv,
         "value": {
-            "type": {"name": pvType if pvType is not None else "VDouble", "version": 1},  # TODO fix type from the PV
             "value": pvValue,
             "time": {"unixSec": unixSec, "nanoSec": nanoSec},
-            "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NONE"},
-            "display": display if display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+            "type": pvType if pvType is not None else {"name": "VDouble", "version": 1},
+            "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+            "display": display
+            if display is not None
+            else {
+                "lowDisplay": 0.0,
+                "highDisplay": 0.0,
+                "units": "",
+                "lowAlarm": 0,
+                "highAlarm": 0,
+                "lowWarning": 0,
+                "highWarning": 0,
+            },
         },
     }
+    if enumOptions is not None:
+        toReturn["value"]["enum"] = {"labels": enumOptions}
+    return toReturn

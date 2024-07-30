@@ -2,6 +2,6 @@ requests
 pandas
 matplotlib
 numpy
-pyepics
+p4p
 python-gitlab
 py-epicsarchiver>=0.5

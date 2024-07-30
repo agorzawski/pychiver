@@ -1,5 +1,8 @@
 # Examples *Save and Restore*
 > Disclaimer: **This is a prototype for the python service connection for save and restore service. Use at your own risk**
+>
+>This module is using `p4p` with `pva` to interact with epics network.
+
 
 ## Service
 
@@ -147,10 +150,13 @@ some_snapshot = sar.takeSnapshot(some_config,
                                  newName="Values From the DB",
                                  newDescription="from the tests back on Nov2023")
 ```
+> **Note** at this call a live call (pvget) will be executed to establish types of PVs and their 'now' value(s)
 
-> Note1: `setValues` does not have to be all PVs, in case manual one `setValue` is not provided
+> Note1: `setValues` does not have to be all PVs, in case user one `setValue` is not provided
 > the one currently fetched from live epics is kept.
 
+> Note2: There is an ongoing development. Only main types of PVs: Scalar, Arrays (Double and Int), Enum
+> are tested and working...
 
 
 #### To save them in the service:

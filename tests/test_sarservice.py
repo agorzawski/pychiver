@@ -1,7 +1,7 @@
 import unittest
 
 from pychiver.saveandrestore import *
-from pychiver.sardomain import _prep_snapshot_item_for_json
+from pychiver.sardomain import _prep_input_for_snapshot_item
 
 AUTHOR = "someguy"
 UID_CONFIG = "U1"
@@ -23,7 +23,7 @@ SNAPSHOT_1 = SARSnapshot(
     uniqueId=UID_SNAPSHOT_1,
     name=NAME_SNAPSHOT_1,
     snapshotItems=[
-        _prep_snapshot_item_for_json(
+        _prep_input_for_snapshot_item(
             o.get(),
             SNAP_1_VALUES.get(o.pvName),
             0,
@@ -37,7 +37,7 @@ SNAPSHOT_2 = SARSnapshot(
     uniqueId=UID_SNAPSHOT_2,
     name=NAME_SNAPSHOT_2,
     snapshotItems=[
-        _prep_snapshot_item_for_json(
+        _prep_input_for_snapshot_item(
             o.get(),
             SNAP_2_VALUES.get(o.pvName),
             0,
@@ -51,10 +51,10 @@ class MockUpEpics:
     pv1 = PV1_LIVE_VAL
     pv2 = PV2_LIVE_VAL
 
-    def caget_many(self, pvlist, timeout=1):
+    def get(self, pvlist, timeout=1):
         return [self.pv1, self.pv2]
 
-    def caput_many(self, pvlist, values, **kwargs):
+    def put(self, pvlist, values, **kwargs):
         self.pv1 = values[0]
         self.pv2 = values[1]
 
