@@ -19,7 +19,7 @@ setuptools.setup(
         "python-dateutil",
         "pandas",
         "matplotlib",
-        "numpy",
+        "numpy==1.26.3",
         "p4p",
         "pyepics",
         "python-gitlab",
