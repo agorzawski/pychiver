@@ -141,6 +141,10 @@ class SARSnapshotItem(SARConfigPV):
             },
         }
         if self.enum is not None:
+            try:
+                toReturn["value"]["value"] = self.enum["labels"].index(toReturn["value"]["value"])
+            except Exception:
+                pass
             toReturn["value"]["enum"] = self.enum
         return toReturn
 
