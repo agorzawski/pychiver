@@ -233,15 +233,17 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     "name": sarItem.name,
                     "nodeType": sarItem.getType(),
                     "userName": self._username,
+                    "description": sarItem.description
                 },
-                "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
+                "compositeSnapshotData": {
+                    "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
+                }
             }
             print(self.url_composite_nodes_put.format(parentId))
             result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
-                print(json.loads(result.content))
-                sarItem.uniqueId = json.loads(result.content)["snapshotNode"]["uniqueId"]
+                sarItem.uniqueId = json.loads(result.content)["compositeSnapshotNode"]["uniqueId"]
                 warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
         else:
             raise NotImplementedError("Saving only for SARConfig/SARSnapshot/SARFolder!")
