@@ -229,15 +229,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
 
         elif isinstance(sarItem, SARCompositeSnapshot):
             snapPayload = {
-                "compositeSnapshotNode": {
-                    "name": sarItem.name,
-                    "nodeType": sarItem.getType(),
-                    "userName": self._username,
-                    "description": sarItem.description
-                },
+                "compositeSnapshotNode": {"name": sarItem.name, "nodeType": sarItem.getType(), "userName": self._username, "description": sarItem.description},
                 "compositeSnapshotData": {
                     "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
-                }
+                },
             }
             print(self.url_composite_nodes_put.format(parentId))
             result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload, debug=debug)

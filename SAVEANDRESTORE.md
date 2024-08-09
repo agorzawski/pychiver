@@ -110,14 +110,11 @@ status = sar.restore(snapshot=some_snapshot)
 ### Actions to create, take and/or interact (authentication needed!)
 > General  note: All snapshots created, taken and/or manipulated via the following have flag `dirty=True` to signal that they are NOT the service copy
 
-
-
-#### To create a virtual snapshot
+#### To create a folder
 
 ```python
 from pychiver.sardomain import SarItemBuilder
-snapshots = [snapshot1, snapshot2]
-vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(self, name, snapshots)
+folder = SarItemBuilder.getInstance().createFolder(name, description)
 ```
 
 
@@ -134,22 +131,34 @@ some_config = SarItemBuilder.getInstance().createConfiguration(
   description="Some needed description")
 
 ```
-#### Take new snapshot:
+#### Take a new snapshot:
 
 
 ```python
 # live values
 some_snapshot_retake = sar.takeSnapshot(some_config,
-                                 newName="Values After setup",
-                                 newDescription="Feb2024")
+                                        newName="Values After setup",
+                                        newDescription="Feb2024")
 
 # or take with fixed values
-setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": 666.0,}
-some_snapshot = sar.takeSnapshot(some_config,
+setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": "Disabled",}
+# NOTE: for enum values: either "string option" or int ordinal can be given
+
+some_snapshot = sar.takeSnapshot(some_config, # see example above!
                                  setValues=setValues, # if this optional argument is not given, live values are used!
                                  newName="Values From the DB",
                                  newDescription="from the tests back on Nov2023")
 ```
+
+#### To create a virtual snapshot
+
+```python
+from pychiver.sardomain import SarItemBuilder
+snapshots = [snapshot1, snapshot2]
+vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(name, description, snapshots)
+```
+
+
 > **Note** at this call a live call (pvget) will be executed to establish types of PVs and their 'now' value(s)
 
 > Note1: `setValues` does not have to be all PVs, in case user one `setValue` is not provided
@@ -159,13 +168,13 @@ some_snapshot = sar.takeSnapshot(some_config,
 > are tested and working...
 
 
-#### To save them in the service:
+#### To SAVE the item in the service:
 
 > Note: to interact with the service, one needs to authenticate:
 ```python
 sar = SaveAndRestore(username="somename", password="somepass")
 
-# or if you have an instance running
+# or if you have an instance running, i.e. jupyter notebook
 
 sar.authenticate(username="somename", password="somepass")
 ```
@@ -176,6 +185,8 @@ folder = sar.save(sarItem=some_folder, parentNodeId='<folder uniqueId>')
 config = sar.save(sarItem=some_config, parentNodeId='<folder uniqueId>')
 #or
 snapshot = sar.save(sarItem=some_snapshot, parentNodeId='configUniqueId')
+# or
+compositeSnapshot = sar.save(sarItem=compositeSnapshot, parentNodeId='<folder uniqueId>')
 ```
 > A successful save, updates the result with the correct `uniqueId` and sets `dirty=False`
 
@@ -188,5 +199,5 @@ The main objects are:
 - `SARConfigPV` - simple configuration for one PV,
 - `SARSnapshotItem` - snapshot item holding individual ConfigPV and its snapshoted value,
 - `SARSnapshot` - snapshot that contains the stored SARSnapshotItems,
-- `SARVirtualSnapshot` - virtual snapshot that holds provided snapshots' references and provides the
+- `SARCompositeSnapshot` - virtual snapshot that holds provided snapshots' references and provides the
   combined actions (e.g. compare, restore) on all of them at once
