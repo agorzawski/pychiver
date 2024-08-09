@@ -228,12 +228,18 @@ class SaveAndRestore:
             # print(self.cachedConfigurations)
             return self.cachedConfigurations
 
-    def getConfiguration(self, configId: str = None, name: str = None) -> SARConfig:
+    def getConfiguration(self, configId: str = None, configName: str = None) -> SARConfig:
         # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
         # this has also a dedicated task the https://gitlab.esss.lu.se/ics-software/jmasar-service
-        item = self.service.getSarItem(configId)
-        if isinstance(item, SARConfig):
-            return item
+        if configId is not None:
+            item = self.service.getSarItem(configId)
+            if isinstance(item, SARConfig):
+                return item
+        if configName is not None:
+            for one in self.getAll(nodeType=NodeType.CONFIGURATION).values():
+                if configName in one.name:
+                    return self.getConfiguration(configId=one.uniqueId)
+
         raise ValueError("Given UniqueId {} is not for the configuration.".format(configId))
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:

@@ -82,7 +82,7 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
         if UID_SNAPSHOT_2 in uniqueId:
             return SNAPSHOT_2
 
-    def saveSarItem(self, sarItem: SARItem, parentId=None):
+    def saveSarItem(self, sarItem: SARItem, parentId=None, debug=False):
         # for this class it just accepts as is, no issues on the service side
         pass
 

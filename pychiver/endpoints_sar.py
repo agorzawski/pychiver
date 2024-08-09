@@ -264,7 +264,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             for one in self._getRequest(self.url_snapshots):
                 toReturn.append(SARItem(**one))
 
-        elif nodeType == NodeType.VIRTUAL_SNAPSHOT:
+        elif nodeType == NodeType.COMPOSITE_SNAPSHOT:
             for one in self._getRequest(self.url_snapshots):
                 if "COMPOSITE" in one["nodeType"]:
                     toReturn.append(SARItem(**one))
@@ -273,8 +273,13 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             for one in self._getRequest(self.url_snapshots):
                 if one["nodeType"] in nodeType.name:
                     toReturn.append(self.getSarItem(one["uniqueId"]))
+
+        elif nodeType == NodeType.CONFIGURATION:
+            for one in self._getRequest(self.url_snapshots):
+                r = self._getRequest(self.url_parent.format(one["uniqueId"]))
+                toReturn.append(self.getSarItem(r["uniqueId"]))
         else:
-            raise NotImplementedError("Only Definitions of Snapshots&Composite for now. No other types supported yet!")
+            raise NotImplementedError("Only Definitions of Configurations, Snapshots & Composite for now. No other types supported yet!")
 
         for one in toReturn:
             mainTree[one.uniqueId] = one
