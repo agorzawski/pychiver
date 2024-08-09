@@ -315,12 +315,13 @@ class SaveAndRestore:
             return 1
         return 0
 
-    def save(self, sarItem: SARConfig | SARSnapshot | SARFolder | SARCompositeSnapshot, parentNodeId=None):
+    def save(self, sarItem: SARConfig | SARSnapshot | SARFolder | SARCompositeSnapshot, parentNodeId=None, debug=False):
         """
         Saves the locally created object to the service.
 
         NOTE: This requires to have an authenticated instance!
 
+        :param debug: for Service calls debugging
         :param sarItem: The SaveRestore Object to persist in the service. Now supported Folders/Configs/Snapshots
         :param parentNodeId: The uniqueId of the parent node (folder/configuration)
         :return:
@@ -347,7 +348,7 @@ class SaveAndRestore:
         if self._username is None:
             warnings.warn("[pychiver:SaveRestore] Cannot save without authenticated username! Skipping")
         else:
-            self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId)
+            self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, debug=debug)
 
     def _updateCache(self, newConfiguration):
         import copy

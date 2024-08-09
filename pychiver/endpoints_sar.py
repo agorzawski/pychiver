@@ -129,8 +129,9 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
 
-    def _putRequest(self, url, payloadJson, auth=None):
-        print("PUT: ", payloadJson)
+    def _putRequest(self, url, payloadJson, auth=None, debug=False):
+        if debug:
+            print("PUT: ", payloadJson)
         r = self._session.put(url, json=payloadJson, auth=auth, verify=False, headers={"Content-Type": "application/json"})
         if r.status_code != 200:
             warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
@@ -180,16 +181,17 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         fullPath = "/".join(deepestFolder[::-1])
         return fullPath
 
-    def saveSarItem(self, sarItem: SARSnapshot | SARConfig | SARFolder, parentId=None):
+    def saveSarItem(self, sarItem: SARSnapshot | SARConfig | SARFolder, parentId=None, debug=False):
         """
         following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
+        :param debug: for service request visibility, default False
         :param sarItem: The SaveRestore Object to persist in the service
         :param parentId: The uniqueId of the parent node (folder/configuration)
         :return:
         """
         if isinstance(sarItem, SARFolder):
             folderPayload = {"userName": self._username, "name": sarItem.getName(), "description": sarItem.description, "type": sarItem.getType()}
-            result = self._putRequest(url=self.url_node_put.format(parentId), payloadJson=folderPayload)
+            result = self._putRequest(url=self.url_node_put.format(parentId), payloadJson=folderPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
                 sarItem.uniqueId = json.loads(result.content)["uniqueId"]
@@ -203,7 +205,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     "pvList": [{"pvName": one.pvName, "readbackPvName": one.readbackPvName, "readOnly": one.readonly} for one in sarItem.configList]
                 },
             }
-            result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload)
+            result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
                 sarItem.uniqueId = json.loads(result.content)["configurationNode"]["uniqueId"]
@@ -219,7 +221,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                 },
                 "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in sarItem.getConfigPVs]},
             }
-            result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload)
+            result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
                 sarItem.uniqueId = json.loads(result.content)["snapshotNode"]["uniqueId"]
@@ -235,7 +237,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                 "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
             }
             print(self.url_composite_nodes_put.format(parentId))
-            result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload)
+            result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
                 print(json.loads(result.content))
