@@ -98,6 +98,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_snapshots = "{}/snapshots".format(self.service_url)
         self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
+        self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
 
         self._session = None
         self._username = None
@@ -221,6 +222,23 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload)
             if result.status_code == 200:
                 sarItem.dirty = False
+                sarItem.uniqueId = json.loads(result.content)["snapshotNode"]["uniqueId"]
+                warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
+
+        elif isinstance(sarItem, SARCompositeSnapshot):
+            snapPayload = {
+                "compositeSnapshotNode": {
+                    "name": sarItem.name,
+                    "nodeType": sarItem.getType(),
+                    "userName": self._username,
+                },
+                "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
+            }
+            print(self.url_composite_nodes_put.format(parentId))
+            result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload)
+            if result.status_code == 200:
+                sarItem.dirty = False
+                print(json.loads(result.content))
                 sarItem.uniqueId = json.loads(result.content)["snapshotNode"]["uniqueId"]
                 warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
         else:

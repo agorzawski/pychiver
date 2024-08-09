@@ -315,7 +315,7 @@ class SaveAndRestore:
             return 1
         return 0
 
-    def save(self, sarItem: SARConfig | SARSnapshot | SARFolder, parentNodeId=None):
+    def save(self, sarItem: SARConfig | SARSnapshot | SARFolder | SARCompositeSnapshot, parentNodeId=None):
         """
         Saves the locally created object to the service.
 
@@ -328,6 +328,9 @@ class SaveAndRestore:
 
         if isinstance(sarItem, SARConfig) and parentNodeId is None:
             raise ValueError("Cannot save Config without a parent!")
+
+        if isinstance(sarItem, SARCompositeSnapshot) and parentNodeId is None:
+            raise ValueError("Cannot save Composite Snapshot without the parent!")
 
         if isinstance(sarItem, SARSnapshot) and parentNodeId is None:
             parentNodeId = self.service.getParent(sarItem.uniqueId).uniqueId

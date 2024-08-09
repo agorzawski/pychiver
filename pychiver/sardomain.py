@@ -18,7 +18,7 @@ class NodeType(Enum):
     FOLDER = "F"
     CONFIGURATION = "C"
     SNAPSHOT = "S"
-    VIRTUAL_SNAPSHOT = "V"
+    COMPOSITE_SNAPSHOT = "V"
 
 
 class SARItem:
@@ -219,7 +219,8 @@ class SARCompositeSnapshot(SARItem):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.nodeType = NodeType.VIRTUAL_SNAPSHOT
+        self.nodeType = NodeType.COMPOSITE_SNAPSHOT
+        self.dirty = True
 
         if kwargs.get("properties", None) is None:
             self.properties = {"golden": "false"}
@@ -237,8 +238,11 @@ class SARCompositeSnapshot(SARItem):
             self.snapshots.append(one)
 
     def __repr__(self):
-        base = "[V][ ] {} / {} ".format(self.name, self.uniqueId)
+        base = "[V][{}] {} / {} ".format("*" if self.dirty else " ", self.name, self.uniqueId)
         return base
+
+    def getSnapshotsIds(self):
+        return [s.uniqueId for s in self.snapshots]
 
     def getSnapshots(self):
         return [s for s in self.snapshots]
