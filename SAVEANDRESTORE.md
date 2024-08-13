@@ -141,7 +141,7 @@ some_snapshot_retake = sar.takeSnapshot(some_config,
                                         newDescription="Feb2024")
 
 # (otional) prepare with fixed SetPoint values
-setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": "Disabled",} 
+setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": "Disabled",}
 # (optiona) prep with fixed Readback values (if applicable)
 setReadbackValues = {"SomePV1_RB": -1.0}
 
