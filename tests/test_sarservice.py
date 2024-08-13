@@ -9,13 +9,17 @@ UID_OF_SOME_PARENT = "U2"
 UID_SNAPSHOT_1 = "U2a"
 UID_SNAPSHOT_2 = "U2b"
 NAME_SNAPSHOT_1 = "Snapshot1"
+NAME_SNAPSHOT_1_RB = "Snapshot1 with ReadBack"
 NAME_SNAPSHOT_2 = "Snapshot2"
 PV1 = "PV1"
+PV1_RB = "PV1_RB"
 PV2 = "PV2"
 PV1_LIVE_VAL = 19.9
+PV1_RB_LIVE_VAL = 1999.9
 PV1_MANUAL_VAL = 18.99
 PV2_LIVE_VAL = 21.1
 CONFIG = SARConfig(uniqueId=UID_CONFIG, name="config", sarConfigPVs=[SARConfigPV(pvName=PV1), SARConfigPV(pvName=PV2)])
+CONFIG_RB = SARConfig(uniqueId=UID_CONFIG, name="config", sarConfigPVs=[SARConfigPV(pvName=PV1, readbackPvName=PV1_RB), SARConfigPV(pvName=PV2)])
 SOME_CONFIG = SARConfig(uniqueId=UID_OF_SOME_PARENT, name="some config", sarConfigPVs=[])
 
 SNAP_1_VALUES = {PV1: 20.0, PV2: 20.9}
@@ -29,6 +33,16 @@ SNAPSHOT_1 = SARSnapshot(
             0,
         )
         for o in CONFIG.configList
+    ],
+)
+
+SNAP_1_RB_VALUES = {PV1_RB: 66.0}
+SNAPSHOT_1_with_RB = SARSnapshot(
+    uniqueId=UID_SNAPSHOT_1,
+    name=NAME_SNAPSHOT_1_RB,
+    snapshotItems=[
+        _prep_input_for_snapshot_item(configPv=o.get(), pvValue=SNAP_1_VALUES.get(o.pvName), unixSec=0, pvRbValue=SNAP_1_RB_VALUES.get(o.readbackPvName, None))
+        for o in CONFIG_RB.configList
     ],
 )
 
@@ -50,8 +64,13 @@ SNAPSHOT_2 = SARSnapshot(
 class MockUpEpics:
     pv1 = PV1_LIVE_VAL
     pv2 = PV2_LIVE_VAL
+    pv1_rb = PV1_RB_LIVE_VAL
 
     def get(self, pvlist, timeout=1):
+        if None in pvlist:
+            return [None for i in pvlist]
+        if PV1_RB in pvlist:
+            return [self.pv1_rb, None]
         return [self.pv1, self.pv2]
 
     def put(self, pvlist, values, **kwargs):
@@ -84,6 +103,16 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
 
     def saveSarItem(self, sarItem: SARItem, parentId=None, debug=False):
         # for this class it just accepts as is, no issues on the service side
+        if sarItem.getType() == NodeType.SNAPSHOT:
+            return {
+                "snapshotNode": {
+                    "name": sarItem.getName(),
+                    "description": sarItem.description,
+                    "userName": AUTHOR,
+                    "nodeType": sarItem.getType(),
+                },
+                "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in sarItem.getConfigPVs]},
+            }
         pass
 
     def getChildren(self, uniqueId=None, forcedTypeTuple=None):
@@ -153,6 +182,12 @@ class TestSARService(unittest.TestCase):
 
     def test_saveSnapshot_incorrect_parent_corrected(self):
         self.sar.save(SNAPSHOT_1, parentNodeId="blah")
+
+    def test_takeSnapshot_correct_with_readback(self):
+        self.sar.takeSnapshot(CONFIG_RB, newName="some name", newDescription="newDesc")
+
+    def test_saveSnapshot_correct_with_readback(self):
+        self.sar.save(SNAPSHOT_1_with_RB, parentNodeId="blah")
 
 
 if __name__ == "__main__":

@@ -101,12 +101,14 @@ class SaveAndRestore:
         self,
         base: SARConfig | SARSnapshot,
         setValues=None,
+        setReadBackValues=None,
         newName=None,
         newDescription=None,
     ) -> SARSnapshot:
         """
         Takes a snapshot for a given config or retakes for the existing snapshot.
         Can be updated with the additionally provided Pv->Value as setValues
+        :param setReadBackValues: optional, default None (i.e. live values from EPICS will be fetched), overrides the reference readback values
         :param setValues: optional, default None (i.e. live values from EPICS will be fetched), should be provided in
         a form of a dict of {PVName -> value}.
         :param base: can be SARConfig or a SARSnapshot,
@@ -117,10 +119,19 @@ class SaveAndRestore:
         if isinstance(base, SARSnapshot):
             base = self.service.getParent(uniqueId=base.uniqueId)
         liveValues = self.epics.get(base.getPVs())
+        readBackJustPvs = []
+        a = base.getReadBackPVs()
+        for one in a:
+            if one is not None:
+                readBackJustPvs.append(one)
+        liveReadBackValues = self.epics.get(readBackJustPvs)
         newLiveValues = {k: v for k, v in zip(base.getPVs(), liveValues)}
+        newLiveReadBackValues = {k: v for k, v in zip(readBackJustPvs, liveReadBackValues)}
         if isinstance(base, SARConfig):
             if setValues is None:
                 setValues = newLiveValues
+            if setReadBackValues is None:
+                setReadBackValues = newLiveReadBackValues
             snap = {
                 "uniqueId": -1,
                 "dirty": True,
@@ -135,6 +146,11 @@ class SaveAndRestore:
                         # alarm=decodeAlarm(newLiveValues.get(o.pvName)), #  TODO see missing method
                         # display=decodeDisplay(newLiveValues.get(o.pvName)), # TODO see missing method
                         enumOptions=decodeEnum(newLiveValues.get(o.pvName)),
+                        pvRbValue=decodeValue(setReadBackValues.get(o.readbackPvName, newLiveReadBackValues.get(o.readbackPvName, None))),
+                        pvRbType=decodeType(newLiveReadBackValues.get(o.readbackPvName, None)),
+                        enumRbOptions=decodeEnum(newLiveReadBackValues.get(o.readbackPvName, None)),
+                        # alarm=decodeAlarm(newLiveReadBackValues.get(o.readbackPvName, None)), #  TODO see missing method
+                        # display=decodeDisplay(newLiveReadBackValues.get(o.readbackPvName, None)), # TODO see missing method
                     )
                     for o in base.configList
                 ],

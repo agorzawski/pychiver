@@ -95,6 +95,9 @@ class SARConfig(SARItem):
     def getPVs(self) -> list:
         return [o.pvName for o in self.configList]
 
+    def getReadBackPVs(self):
+        return [o.readbackPvName for o in self.configList]
+
 
 class SARConfigPV:
     def __init__(self, **kwargs):
@@ -123,10 +126,18 @@ class SARSnapshotItem(SARConfigPV):
             self.alarm = kwargs.get("value", {}).get("alarm", None)
             self.display = kwargs.get("value", {}).get("display", None)
             self.enum = kwargs.get("value", {}).get("enum", None)
+            if kwargs.get("readbackValue", None) is not None:
+                self.readbackPvValue = kwargs.get("readbackValue", {}).get("value", None)
+                self.readbackType = kwargs.get("readbackValue", {}).get("type", None)
+                self.readbackAlarm = kwargs.get("readbackValue", {}).get("alarm", None)
+                self.readbackDisplay = kwargs.get("readbackValue", {}).get("display", None)
+                self.readbackEnum = kwargs.get("readbackValue", {}).get("enum", None)
         else:
             raise ValueError("No value given")
 
     def __repr__(self):
+        if self.configPv["readbackPvName"] is not None:
+            return "{} / {} (RB: {} / {})".format(self.pvName, self.pvValue, self.configPv["readbackPvName"], self.readbackPvValue)
         return "{} / {}".format(self.pvName, self.pvValue)
 
     def toJson(self, unixSec, nanoSec):
@@ -140,12 +151,31 @@ class SARSnapshotItem(SARConfigPV):
                 "display": self.display if self.display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
             },
         }
+
+        if self.configPv.get("readbackPvName", None) is not None:
+            print(self.configPv.get("readbackPvName", None))
+            toReturn["readbackValue"] = {
+                "value": self.readbackPvValue,
+                "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+                "type": self.readbackType if self.readbackType is not None else {"name": "VDouble", "version": 1},
+                "alarm": self.readbackAlarm if self.readbackAlarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+                "display": self.readbackDisplay if self.readbackDisplay is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+            }
+
         if self.enum is not None:
             try:
                 toReturn["value"]["value"] = self.enum["labels"].index(toReturn["value"]["value"])
             except Exception:
                 pass
             toReturn["value"]["enum"] = self.enum
+            try:
+                if self.configPv.get("readbackPvName", None) is not None:
+                    toReturn["readbackValue"]["value"] = self.enum["labels"].index(toReturn["readbackValue"]["value"])
+            except Exception:
+                pass
+            toReturn["readbackValue"]["enum"] = self.enum
+
+        print(toReturn)
         return toReturn
 
 
@@ -192,8 +222,11 @@ class SARSnapshot(SARItem):
             "configPVs": self.configPVs,
         }
 
-    def getPVs(self) -> list:
+    def getPVs(self) -> list[str]:
         return list([o.configPv.get("pvName", []) for o in self.configPVs])
+
+    def getReadBackPVs(self) -> list[str]:
+        return list([o.configPv.get("readbackPvName", []) for o in self.configPVs])
 
     @property
     def getConfigPVs(self) -> list[SARSnapshotItem]:
@@ -330,27 +363,49 @@ def _append_config(rowsList, one: SARSnapshotItem):
     )
 
 
-def _prep_input_for_snapshot_item(configPv, pvValue, unixSec, nanoSec=0, pvType=None, alarm=None, display=None, enumOptions=None, verb=None):
+def _prep_input_for_snapshot_item(
+    configPv,
+    pvValue,
+    unixSec,
+    nanoSec=0,
+    pvType=None,
+    alarm=None,
+    display=None,
+    enumOptions=None,
+    pvRbValue=None,
+    rbNanoSec=0,
+    pvRbType=None,
+    alarmRb=None,
+    displayRb=None,
+    enumRbOptions=None,
+    verb=None,
+):
     toReturn = {
         "configPv": configPv,
-        "value": {
-            "value": pvValue,
-            "time": {"unixSec": unixSec, "nanoSec": nanoSec},
-            "type": pvType if pvType is not None else {"name": "VDouble", "version": 1},
-            "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
-            "display": display
-            if display is not None
-            else {
-                "lowDisplay": 0.0,
-                "highDisplay": 0.0,
-                "units": "",
-                "lowAlarm": 0,
-                "highAlarm": 0,
-                "lowWarning": 0,
-                "highWarning": 0,
-            },
-        },
+        "value": _prep_value_block(alarm, display, nanoSec, pvType, pvValue, unixSec),
     }
+    if pvRbValue is not None:
+        toReturn["readbackValue"] = _prep_value_block(alarmRb, displayRb, nanoSec, pvRbType, pvRbValue, rbNanoSec)
     if enumOptions is not None:
         toReturn["value"]["enum"] = {"labels": enumOptions}
     return toReturn
+
+
+def _prep_value_block(alarm, display, nanoSec, pvType, pvValue, unixSec):
+    return {
+        "value": pvValue,
+        "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+        "type": pvType if pvType is not None else {"name": "VDouble", "version": 1},
+        "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+        "display": display
+        if display is not None
+        else {
+            "lowDisplay": 0.0,
+            "highDisplay": 0.0,
+            "units": "",
+            "lowAlarm": 0,
+            "highAlarm": 0,
+            "lowWarning": 0,
+            "highWarning": 0,
+        },
+    }

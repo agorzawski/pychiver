@@ -140,15 +140,19 @@ some_snapshot_retake = sar.takeSnapshot(some_config,
                                         newName="Values After setup",
                                         newDescription="Feb2024")
 
-# or take with fixed values
-setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": "Disabled",}
-# NOTE: for enum values: either "string option" or int ordinal can be given
+# (otional) prepare with fixed SetPoint values
+setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": "Disabled",} 
+# (optiona) prep with fixed Readback values (if applicable)
+setReadbackValues = {"SomePV1_RB": -1.0}
 
 some_snapshot = sar.takeSnapshot(some_config, # see example above!
                                  setValues=setValues, # if this optional argument is not given, live values are used!
+                                 setReadbackValuest=setReadbackValues, # if this optional argument is not given, live values are used!
                                  newName="Values From the DB",
                                  newDescription="from the tests back on Nov2023")
 ```
+
+> NOTE: for the `enum` type values can be either "string option" or int ordinal. Eg. 'Probe' or 1
 
 #### To create a virtual snapshot
 
