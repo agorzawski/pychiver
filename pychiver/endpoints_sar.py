@@ -234,7 +234,6 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                     "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
                 },
             }
-            print(self.url_composite_nodes_put.format(parentId))
             result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False

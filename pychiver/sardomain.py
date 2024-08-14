@@ -153,7 +153,7 @@ class SARSnapshotItem(SARConfigPV):
         }
 
         if self.configPv.get("readbackPvName", None) is not None:
-            print(self.configPv.get("readbackPvName", None))
+            # print(self.configPv.get("readbackPvName", None))
             toReturn["readbackValue"] = {
                 "value": self.readbackPvValue,
                 "time": {"unixSec": unixSec, "nanoSec": nanoSec},
@@ -175,7 +175,6 @@ class SARSnapshotItem(SARConfigPV):
                     pass
                 toReturn["readbackValue"]["enum"] = self.enum
 
-        print(toReturn)
         return toReturn
 
 
@@ -387,7 +386,15 @@ def _prep_input_for_snapshot_item(
     if pvRbValue is not None:
         toReturn["readbackValue"] = _prep_value_block(alarmRb, displayRb, nanoSec, pvRbType, pvRbValue, rbNanoSec)
     if enumOptions is not None:
+        # if '' in enumOptions:  # TODO review this part again and again! seems like fishy fix for a weird issue...
+        #     toReturn["value"]["enum"] = {"labels": enumRbOptions}
+        # else:
+        #     toReturn["value"]["enum"] = {"labels": enumOptions}
         toReturn["value"]["enum"] = {"labels": enumOptions}
+
+    if enumRbOptions is not None:
+        toReturn["readbackValue"]["enum"] = {"labels": enumRbOptions}
+    # print(toReturn)
     return toReturn
 
 
