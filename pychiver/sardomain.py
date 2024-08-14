@@ -170,8 +170,7 @@ class SARSnapshotItem(SARConfigPV):
             toReturn["value"]["enum"] = self.enum
             if self.configPv.get("readbackPvName", None) is not None:
                 try:
-                    if self.configPv.get("readbackPvName", None) is not None:
-                        toReturn["readbackValue"]["value"] = self.enum["labels"].index(toReturn["readbackValue"]["value"])
+                    toReturn["readbackValue"]["value"] = self.enum["labels"].index(toReturn["readbackValue"]["value"])
                 except Exception:
                     pass
                 toReturn["readbackValue"]["enum"] = self.enum
