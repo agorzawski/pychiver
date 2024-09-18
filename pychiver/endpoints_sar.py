@@ -99,6 +99,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
         self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
+        self.url_restore = "{}/restore/node?parentNodeId={{}}".format(self.service_url)
 
         self._session = None
         self._username = None
@@ -301,3 +302,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_parent.format(uniqueId)
         return self._fromNode_toSAR(self._getRequest(urlToGet))
+
+    def restore(self, snapshot: SARSnapshot):
+        if isinstance(snapshot, SARSnapshot):
+            r = self._postRequest(self.url_restore.format(snapshot.uniqueId), payloadJson={})
+            if r.status_code == 200:
+                warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
+        warnings.warn("[pychiver:SaveRestoreService] {} cannot restore non SnapshotItem!".format(snapshot))

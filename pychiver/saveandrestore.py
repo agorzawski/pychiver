@@ -318,16 +318,20 @@ class SaveAndRestore:
             df["archived_value"] = values
         return df
 
-    def restore(self, snapshot: SARSnapshot = None, **kwargs):
+    def restore(self, snapshot: SARSnapshot = None, local=True, **kwargs):
         """
         Sets the PVs to their values as provided in the snapshot
-
+        :param local: default true, or defer the restore function to the service.
         :param snapshot:
-        :return:
+        :return: 0 when executed with success, 1 when error occurred
         """
-        # TODO with the upcoming changes to SAR add additional flags to restore locally/remotely
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError("For restore an SARSnapshot is required!")
+
+        if not local:
+            self.service.restore(snapshot)
+            return 0
+
         try:
             pvsToPut = [one.configPv["pvName"] for one in snapshot.getConfigPVs]
             valuesToPut = [one.value["value"] for one in snapshot.getConfigPVs]
