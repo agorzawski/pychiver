@@ -105,13 +105,14 @@ class SARConfigPV:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or an entire configPV json")
         self.pvName = kwargs.get("pvName")
         self.readbackPvName = kwargs.get("readbackPvName", None)
-        self.readonly = kwargs.get("readonly", False)
+
+        self.readOnly = kwargs.get("readOnly", False)
 
     def __repr__(self):
-        return "{} / {} [RO:{}]".format(self.pvName, self.readbackPvName, self.readonly)
+        return "{} / {} [RO:{}]".format(self.pvName, self.readbackPvName, self.readOnly)
 
     def get(self):
-        return {"pvName": self.pvName, "readbackPvName": self.readbackPvName, "readonly": self.readonly}
+        return {"pvName": self.pvName, "readbackPvName": self.readbackPvName, "readOnly": self.readOnly}
 
 
 class SARSnapshotItem(SARConfigPV):

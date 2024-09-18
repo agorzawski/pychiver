@@ -203,7 +203,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             configPayload = {
                 "configurationNode": {"userName": self._username, "name": sarItem.getName(), "description": sarItem.description, "type": sarItem.getType()},
                 "configurationData": {
-                    "pvList": [{"pvName": one.pvName, "readbackPvName": one.readbackPvName, "readOnly": one.readonly} for one in sarItem.configList]
+                    "pvList": [{"pvName": one.pvName, "readbackPvName": one.readbackPvName, "readOnly": one.readOnly} for one in sarItem.configList]
                 },
             }
             result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload, debug=debug)
