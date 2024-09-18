@@ -2,16 +2,17 @@ import unittest
 
 from pychiver.sardomain import *
 
+NAME_1 = "NumberOfTheBeast"
+NAME_2 = "NumberOfTheBeast Square"
+
 SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT = {
     "uniqueId": 666,
-    "name": "NumberOfTheBeast",
-    "nodeType": "THE PIT",
+    "name": NAME_1,
 }
 
 SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2 = {
     "uniqueId": -666,
-    "name": "NumberOfTheBeast Square",
-    "nodeType": "THE PIT",
+    "name": NAME_2,
 }
 
 PV_NAME = "Lucifer PV"
@@ -68,7 +69,9 @@ class TestSARItems(unittest.TestCase):
             SARFolder(**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT)
 
     def test_correct_init_folder(self):
-        SARFolder(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "fullPath": "Hell/Level1"})
+        a = SARFolder(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "fullPath": "Hell/Level1"})
+        self.assertEqual(a.getName(), NAME_1)
+        self.assertEqual(a.getType(), NodeType.FOLDER.name)
 
     def test_incorrect_init_configpv(self):
         with self.assertRaises(ValueError):
