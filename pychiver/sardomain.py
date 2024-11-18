@@ -184,6 +184,7 @@ class SARSnapshotProto(SARItem):
     """
     Main interface to the snapshot-like object.
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.creator = self.INIT

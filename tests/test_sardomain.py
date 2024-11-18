@@ -153,7 +153,6 @@ class TestSARSnapshotsDetailed(unittest.TestCase):
 
 
 class TestSARCompositeSnapshotsDetailed(unittest.TestCase):
-
     def test_correct_composite_snapshot(self):
         a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
         b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
@@ -161,18 +160,20 @@ class TestSARCompositeSnapshotsDetailed(unittest.TestCase):
         self.assertEqual(len(comp.getSnapshots()), 2)
 
     def test_correct_composite_snapshot_with_other_composite(self):
-        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT,
-                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
-        a1 = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB_OTHER,
-                            "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE_2})
-        b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2,
-                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
+        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
+        a1 = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB_OTHER, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE_2})
+        b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
 
-        comp2 = SARCompositeSnapshot(uniqueId=-1, name="Some Other Composite",
-                                     description="Some other description", snapshots=[a1,])
+        comp2 = SARCompositeSnapshot(
+            uniqueId=-1,
+            name="Some Other Composite",
+            description="Some other description",
+            snapshots=[
+                a1,
+            ],
+        )
 
-        comp = SARCompositeSnapshot(uniqueId=-1, name="Some Funny Name", description="Some other description",
-                                    snapshots=[a, b, comp2])
+        comp = SARCompositeSnapshot(uniqueId=-1, name="Some Funny Name", description="Some other description", snapshots=[a, b, comp2])
         self.assertEqual(len(comp.getSnapshots()), 3)
 
         allPvs = [PV_NAME, PV_NAME_2, PV_2_READBACK_NAME]
