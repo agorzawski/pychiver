@@ -4,6 +4,7 @@ from pychiver.sardomain import *
 
 NAME_1 = "NumberOfTheBeast"
 NAME_2 = "NumberOfTheBeast Square"
+NAME_3 = "NumberOfTheBeast Cube"
 
 SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT = {
     "uniqueId": 666,
@@ -15,8 +16,15 @@ SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2 = {
     "name": NAME_2,
 }
 
+SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB_OTHER = {
+    "uniqueId": -666,
+    "name": NAME_3,
+}
+
 PV_NAME = "Lucifer PV"
 PV_VALUE = -666
+PV_NAME_2 = "Diablo PV"
+PV_VALUE_2 = -667
 PV_READBACK_NAME = "Belzebub PV"
 PV_READBACK_VALUE = -999
 
@@ -27,6 +35,15 @@ JSON_SIMPLE_CONFIG = {"pvName": PV_NAME, "readbackPvName": None, "readonly": Fal
 JSON_SIMPLE_SNAPSHOT_VALUE = {
     "type": {"name": "VDouble", "version": 1},
     "value": PV_VALUE,
+    "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
+    "time": {"unixSec": 1623165540, "nanoSec": 386023508},
+    "display": {"units": "mA"},
+}
+
+JSON_SIMPLE_CONFIG_2 = {"pvName": PV_NAME_2, "readbackPvName": None, "readonly": False}
+JSON_SIMPLE_SNAPSHOT_VALUE_2 = {
+    "type": {"name": "VDouble", "version": 1},
+    "value": PV_VALUE_2,
     "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
     "time": {"unixSec": 1623165540, "nanoSec": 386023508},
     "display": {"units": "mA"},
@@ -46,6 +63,13 @@ JSON_FOR_COMPLETE_SNAPSHOT_VALUE = [
     {
         "configPv": JSON_SIMPLE_CONFIG,
         "value": JSON_SIMPLE_SNAPSHOT_VALUE,
+    }
+]
+
+JSON_FOR_COMPLETE_SNAPSHOT_VALUE_2 = [
+    {
+        "configPv": JSON_SIMPLE_CONFIG_2,
+        "value": JSON_SIMPLE_SNAPSHOT_VALUE_2,
     }
 ]
 
@@ -129,8 +153,28 @@ class TestSARSnapshotsDetailed(unittest.TestCase):
 
 
 class TestSARCompositeSnapshotsDetailed(unittest.TestCase):
+
     def test_correct_composite_snapshot(self):
         a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
         b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2, "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
         comp = SARCompositeSnapshot(uniqueId=-1, name="Some Funny Name", description="Some other description", snapshots=[a, b])
         self.assertEqual(len(comp.getSnapshots()), 2)
+
+    def test_correct_composite_snapshot_with_other_composite(self):
+        a = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT,
+                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
+        a1 = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB_OTHER,
+                            "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE_2})
+        b = SARSnapshot(**{**SIMPLE_JSON_EXAMPLE_FOR_ANY_SAR_OBJECT_NB2,
+                           "snapshotItems": JSON_FOR_COMPLETE_SNAPSHOT_VALUE})
+
+        comp2 = SARCompositeSnapshot(uniqueId=-1, name="Some Other Composite",
+                                     description="Some other description", snapshots=[a1,])
+
+        comp = SARCompositeSnapshot(uniqueId=-1, name="Some Funny Name", description="Some other description",
+                                    snapshots=[a, b, comp2])
+        self.assertEqual(len(comp.getSnapshots()), 3)
+
+        allPvs = [PV_NAME, PV_NAME_2, PV_2_READBACK_NAME]
+        for one in comp.getPVs():
+            self.assertTrue(one in allPvs)

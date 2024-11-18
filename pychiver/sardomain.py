@@ -7,6 +7,7 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
 import warnings
+from abc import abstractmethod
 
 import pandas as pd
 from enum import Enum, unique
@@ -179,17 +180,58 @@ class SARSnapshotItem(SARConfigPV):
         return toReturn
 
 
-class SARSnapshot(SARItem):
+class SARSnapshotProto(SARItem):
+    """
+    Main interface to the snapshot-like object.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.creator = self.INIT
+        self.created = self.INIT
+        self.lastModified = self.INIT
+        self.configPVs = []
+
+    @abstractmethod
+    def getPVs(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def getReadBackPVs(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def getStoredValues(self) -> pd.DataFrame:
+        pass
+
+    @abstractmethod
+    def getStoredValue(self, pvName):
+        pass
+
+    @property
+    @abstractmethod
+    def getConfigPVs(self) -> list[SARSnapshotItem]:
+        pass
+
+    def metaData(self) -> dict:
+        return {
+            "name": self.getName(),
+            "description": self.description,
+            "creator": self.creator,
+            "created": self.created,
+            "lastModified": self.lastModified,
+            "uniqueId": self.uniqueId,
+            "properties": [] if self.properties is not None else self.properties,
+            "configPVs": self.configPVs,
+        }
+
+
+class SARSnapshot(SARSnapshotProto):
     """
     SAR Item dedicated for a given snapshot instance.
     """
 
     def __init__(self, **kwargs):
-        self.creator = self.INIT
-        self.created = self.INIT
-        self.lastModified = self.INIT
         super().__init__(**kwargs)
-        self.configPVs = []
         if kwargs.get("snapshotItems", None) is None:
             raise ValueError("Cannot initialise SARSnapshot object without snapshotItems/configPVs!")
         if kwargs.get("tags", None) is None:
@@ -209,18 +251,6 @@ class SARSnapshot(SARItem):
                 base += " GOLDEN"
                 break
         return base
-
-    def metaData(self) -> dict:
-        return {
-            "name": self.getName(),
-            "description": self.description,
-            "creator": self.creator,
-            "created": self.created,
-            "lastModified": self.lastModified,
-            "uniqueId": self.uniqueId,
-            "properties": self.properties,
-            "configPVs": self.configPVs,
-        }
 
     def getPVs(self) -> list[str]:
         return list([o.configPv.get("pvName", []) for o in self.configPVs])
@@ -245,7 +275,7 @@ class SARSnapshot(SARItem):
         raise ValueError("no {} stored in this snapshot!".format(pvName))
 
 
-class SARCompositeSnapshot(SARItem):
+class SARCompositeSnapshot(SARSnapshotProto):
     """
     SAR Item dedicated for a given snapshot instance.
     """
@@ -263,8 +293,8 @@ class SARCompositeSnapshot(SARItem):
 
         self.snapshots = []
         for one in kwargs.get("snapshots"):
-            if not isinstance(one, SARSnapshot):
-                raise ValueError("One of the provided snapshots is not a Snapshot!")
+            if not isinstance(one, SARSnapshotProto):
+                raise ValueError("One of the provided snapshots is not a Snapshot or CompositeSnapshot!")
 
             # TODO impose PV checks for double definitions, merging strtegy etc...
             # provide a callback
@@ -284,6 +314,13 @@ class SARCompositeSnapshot(SARItem):
         combinedList = []
         for one in self.snapshots:
             for onePV in one.getPVs():
+                combinedList.append(onePV)
+        return list(combinedList)
+
+    def getReadBackPVs(self) -> list[str]:
+        combinedList = []
+        for one in self.snapshots:
+            for onePV in one.getReadBackPVs():
                 combinedList.append(onePV)
         return list(combinedList)
 
