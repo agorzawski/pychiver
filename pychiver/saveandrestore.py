@@ -24,15 +24,19 @@ SOFTWARE.
 Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
+from numpy import ndarray
 import pandas
 import math
 from json import JSONDecodeError
 from .endpoints_sar import *
-from .sardomain import _prep_snapshot_item
+from .sardomain import _prep_input_for_snapshot_item
 from .archiver import Archiver
 from .timeutils import getDateTimeObj, datetime, timedelta
 from .instances import DEFAULT_SAVE_RESTORE
-import epics
+from p4p.client.thread import Context
+from p4p.nt.scalar import ntwrappercommon, ntnumericarray, ntfloat
+from p4p.nt.enum import ntenum
+
 import pickle
 import warnings
 
@@ -49,7 +53,14 @@ class SaveAndRestore:
     """
 
     def __init__(
-        self, service_url: str = DEFAULT_SAVE_RESTORE, DefaultImplementation=JSONSaveAndRestoreEndPoint, Epics=epics, cacheFile=None, archiver_url: str = None
+        self,
+        service_url: str = DEFAULT_SAVE_RESTORE,
+        DefaultImplementation=JSONSaveAndRestoreEndPoint,
+        username=None,
+        password=None,
+        Epics=Context("pva"),
+        cacheFile=None,
+        archiver_url: str = None,
     ):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
@@ -58,12 +69,16 @@ class SaveAndRestore:
         If local file will not be found, the first time user will call getConfigurations() a local file will be created.
 
         :param service_url: required, an url for the service
+        :param username: username for performing editing actions (i.e. creates). None, for read only.
+        :param password: relevant password, None for read only
+        :param Epics: relevant epics (p4p) context, default pva,
         :param archiver_url: optional, url for Archiver service, for comparisons
         :param DefaultImplementation: optional, default is JSONSaveAndRestoreEndPoint
         :param cacheFile: optional, default is False
         """
         warnings.warn("[pychiver:SaveRestore] This is a prototype, use with caution!")
-        self.service = DefaultImplementation(service_url=service_url)
+        self._username = username
+        self.service = DefaultImplementation(service_url=service_url, username=username, password=password)
         self.epics = Epics
         self.cachedConfigurations = {}
         self.cacheFile = None
@@ -77,43 +92,65 @@ class SaveAndRestore:
         if archiver_url is not None:
             self._archiver = Archiver(archiver_url=archiver_url)
 
+    def authenticate(self, username=None, password=None):
+        if username is not None and password is not None:
+            self._username = username
+            self.service.authenticate(username=username, password=password)
+
     def takeSnapshot(
         self,
         base: SARConfig | SARSnapshot,
         setValues=None,
+        setReadBackValues=None,
         newName=None,
         newDescription=None,
-        timeout=1,
     ) -> SARSnapshot:
         """
         Takes a snapshot for a given config or retakes for the existing snapshot.
         Can be updated with the additionally provided Pv->Value as setValues
-        :param setValues: default None (i.e. live values from EPICS will be fetched), should be provided in form of
-                    a dict of {PVName -> value}. In case setValue is not provided
+        :param setReadBackValues: optional, default None (i.e. live values from EPICS will be fetched), overrides the reference readback values
+        :param setValues: optional, default None (i.e. live values from EPICS will be fetched), should be provided in
+        a form of a dict of {PVName -> value}.
         :param base: can be SARConfig or a SARSnapshot,
         :param newDescription: description of the snapshot to take,
         :param newName: name of the snapshot to take,
-        :param timeout: default 1,
         :return: a mutable snapshot object to be complemented with missing information and saved,
         """
         if isinstance(base, SARSnapshot):
             base = self.service.getParent(uniqueId=base.uniqueId)
-
-        liveValues = self.epics.caget_many(pvlist=base.getPVs(), timeout=timeout)  # TODO fix pyepics to p4p
+        liveValues = self.epics.get(base.getPVs())
+        readBackJustPvs = []
+        a = base.getReadBackPVs()
+        for one in a:
+            if one is not None:
+                readBackJustPvs.append(one)
+        liveReadBackValues = self.epics.get(readBackJustPvs)
         newLiveValues = {k: v for k, v in zip(base.getPVs(), liveValues)}
+        newLiveReadBackValues = {k: v for k, v in zip(readBackJustPvs, liveReadBackValues)}
         if isinstance(base, SARConfig):
             if setValues is None:
                 setValues = newLiveValues
+            if setReadBackValues is None:
+                setReadBackValues = newLiveReadBackValues
             snap = {
                 "uniqueId": -1,
                 "dirty": True,
                 "name": newName,
                 "description": newDescription,
                 "snapshotItems": [
-                    _prep_snapshot_item(
-                        o.get(),
-                        setValues.get(o.pvName, newLiveValues.get(o.pvName)),
-                        int(datetime.now().timestamp()),
+                    _prep_input_for_snapshot_item(
+                        configPv=o.get(),
+                        unixSec=int(datetime.now().timestamp()),
+                        pvValue=decodeValue(setValues.get(o.pvName, newLiveValues.get(o.pvName))),
+                        pvType=decodeType(newLiveValues.get(o.pvName)),
+                        # alarm=decodeAlarm(newLiveValues.get(o.pvName)), #  TODO see missing method
+                        # display=decodeDisplay(newLiveValues.get(o.pvName)), # TODO see missing method
+                        enumOptions=decodeEnum(newLiveValues.get(o.pvName)),
+                        pvRbValue=decodeValue(setReadBackValues.get(o.readbackPvName, newLiveReadBackValues.get(o.readbackPvName, None))),
+                        pvRbType=decodeType(newLiveReadBackValues.get(o.readbackPvName, None)),
+                        enumRbOptions=decodeEnum(newLiveReadBackValues.get(o.readbackPvName, None)),
+                        # alarm=decodeAlarm(newLiveReadBackValues.get(o.readbackPvName, None)), #  TODO see missing method
+                        # display=decodeDisplay(newLiveReadBackValues.get(o.readbackPvName, None)), # TODO see missing method
                     )
                     for o in base.configList
                 ],
@@ -207,12 +244,18 @@ class SaveAndRestore:
             # print(self.cachedConfigurations)
             return self.cachedConfigurations
 
-    def getConfiguration(self, configId: str = None, name: str = None) -> SARConfig:
+    def getConfiguration(self, configId: str = None, configName: str = None) -> SARConfig:
         # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
         # this has also a dedicated task the https://gitlab.esss.lu.se/ics-software/jmasar-service
-        item = self.service.getSarItem(configId)
-        if isinstance(item, SARConfig):
-            return item
+        if configId is not None:
+            item = self.service.getSarItem(configId)
+            if isinstance(item, SARConfig):
+                return item
+        if configName is not None:
+            for one in self.getAll(nodeType=NodeType.CONFIGURATION).values():
+                if configName in one.name:
+                    return self.getConfiguration(configId=one.uniqueId)
+
         raise ValueError("Given UniqueId {} is not for the configuration.".format(configId))
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
@@ -246,8 +289,7 @@ class SaveAndRestore:
         df = snapshot.getStoredValues()
         if date_time is None:
             # TODO add some comparator support
-            # TODO fix pyepics to p4p
-            values = self.epics.caget_many(pvlist=snapshot.getPVs(), timeout=timeout)
+            values = self.epics.get(snapshot.getPVs())
             df["live_value"] = values
             df["archived_value"] = math.nan
             try:
@@ -276,38 +318,46 @@ class SaveAndRestore:
             df["archived_value"] = values
         return df
 
-    def restore(self, snapshot: SARSnapshot = None, **kwargs):
+    def restore(self, snapshot: SARSnapshot = None, local=True, **kwargs):
         """
         Sets the PVs to their values as provided in the snapshot
-
+        :param local: default true, or defer the restore function to the service.
         :param snapshot:
-        :return:
+        :return: 0 when executed with success, 1 when error occurred
         """
-        # TODO with the upcoming changes to SAR add additional flags to restore locally/remotely
         if not isinstance(snapshot, SARSnapshot):
             raise ValueError("For restore an SARSnapshot is required!")
+
+        if not local:
+            self.service.restore(snapshot)
+            return 0
+
         try:
             pvsToPut = [one.configPv["pvName"] for one in snapshot.getConfigPVs]
             valuesToPut = [one.value["value"] for one in snapshot.getConfigPVs]
-            self.epics.caput_many(pvlist=pvsToPut, values=valuesToPut, **kwargs)  # TODO fix pyepics to p4p
+            self.epics.put(pvsToPut, valuesToPut)
         except Exception:
             warnings.warn("[pychiver:SaveRestore] Something went wrong. Values were not set.")
             return 1
         return 0
 
-    def save(self, sarItem: SARConfig | SARSnapshot, parentNodeId=None, author=None):
+    def save(self, sarItem: SARConfig | SARSnapshot | SARFolder | SARCompositeSnapshot, parentNodeId=None, debug=False):
         """
         Saves the locally created object to the service.
-        :param sarItem:
-        :param parentNodeId:
-        :param author:
+
+        NOTE: This requires to have an authenticated instance!
+
+        :param debug: for Service calls debugging
+        :param sarItem: The SaveRestore Object to persist in the service. Now supported Folders/Configs/Snapshots
+        :param parentNodeId: The uniqueId of the parent node (folder/configuration)
         :return:
         """
-        if author is None:
-            raise ValueError("cannot save without knowing who the author is...")
 
         if isinstance(sarItem, SARConfig) and parentNodeId is None:
             raise ValueError("Cannot save Config without a parent!")
+
+        if isinstance(sarItem, SARCompositeSnapshot) and parentNodeId is None:
+            raise ValueError("Cannot save Composite Snapshot without the parent!")
 
         if isinstance(sarItem, SARSnapshot) and parentNodeId is None:
             parentNodeId = self.service.getParent(sarItem.uniqueId).uniqueId
@@ -321,8 +371,10 @@ class SaveAndRestore:
                     "using the actual parent code!".format(realParentId, parentNodeId)
                 )
                 parentNodeId = realParentId
-
-        self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, author=author)
+        if self._username is None:
+            warnings.warn("[pychiver:SaveRestore] Cannot save without authenticated username! Skipping")
+        else:
+            self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, debug=debug)
 
     def _updateCache(self, newConfiguration):
         import copy
@@ -333,3 +385,44 @@ class SaveAndRestore:
 
     def _status(self):
         self.service.status()
+
+
+# TODO MAKE THESE FEW ONES CLEANER for good. Duno yet how, but will need to be cleaner...
+def decodeValue(value):
+    if isinstance(value, ndarray):
+        return value.tolist()
+    elif isinstance(value, ntenum):
+        return int(value)
+    elif isinstance(value, ntwrappercommon):  # cover the p4p values
+        return value.raw.value
+    return value
+
+
+def decodeType(value) -> dict:
+    if isinstance(value, ntwrappercommon):  # cover the p4p types
+        if isinstance(value, ntnumericarray):
+            if "int" in str(value.dtype):
+                return {"name": "VIntArray", "version": 1}
+            return {"name": "VDoubleArray", "version": 1}
+        elif isinstance(value, ntenum):
+            return {"name": "VEnum", "version": 1}
+        elif isinstance(value, ntfloat):
+            return {"name": "VDouble", "version": 1}
+        else:
+            return {"name": "VDouble", "version": 1}
+            # TODO add the remaining /types
+    return type(value)
+
+
+def decodeEnum(value):
+    if isinstance(value, ntenum):
+        return value.raw.value.choices
+    return None
+
+
+def decodeAlarm(value):
+    return None
+
+
+def decodeDisplay(value):
+    return None

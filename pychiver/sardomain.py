@@ -7,6 +7,7 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
 import warnings
+from abc import abstractmethod
 
 import pandas as pd
 from enum import Enum, unique
@@ -18,7 +19,7 @@ class NodeType(Enum):
     FOLDER = "F"
     CONFIGURATION = "C"
     SNAPSHOT = "S"
-    VIRTUAL_SNAPSHOT = "V"
+    COMPOSITE_SNAPSHOT = "V"
 
 
 class SARItem:
@@ -60,7 +61,9 @@ class SARFolder(SARItem):
         super().__init__(**kwargs)
         if kwargs.get("fullPath", None) is None:
             raise ValueError("Cannot initialise SARFolder object without path!")
+        self.name = kwargs.get("name")
         self.fullPath = kwargs.get("fullPath")
+        self.nodeType = NodeType.FOLDER
 
     def getFullPath(self) -> str:
         return self.fullPath
@@ -74,7 +77,7 @@ class SARConfig(SARItem):
     SAR item dedicated for a configuration
     """
 
-    # TODO fix duplication: configList vs pvList. pVList (native as comes to kwargs, make it unavailable) and
+    # FIXME duplication: configList vs pvList. pVList (native as comes to kwargs, make it unavailable) and
     #  configList (proper Objects should be default)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -93,6 +96,9 @@ class SARConfig(SARItem):
     def getPVs(self) -> list:
         return [o.pvName for o in self.configList]
 
+    def getReadBackPVs(self):
+        return [o.readbackPvName for o in self.configList]
+
 
 class SARConfigPV:
     def __init__(self, **kwargs):
@@ -100,13 +106,14 @@ class SARConfigPV:
             raise ValueError("Cannot initialise SARConfigPV object without pvName or an entire configPV json")
         self.pvName = kwargs.get("pvName")
         self.readbackPvName = kwargs.get("readbackPvName", None)
-        self.readonly = kwargs.get("readonly", False)
+
+        self.readOnly = kwargs.get("readOnly", False)
 
     def __repr__(self):
-        return "{} / {} [RO:{}]".format(self.pvName, self.readbackPvName, self.readonly)
+        return "{} / {} [RO:{}]".format(self.pvName, self.readbackPvName, self.readOnly)
 
     def get(self):
-        return {"pvName": self.pvName, "readbackPvName": self.readbackPvName, "readonly": self.readonly}
+        return {"pvName": self.pvName, "readbackPvName": self.readbackPvName, "readOnly": self.readOnly}
 
 
 class SARSnapshotItem(SARConfigPV):
@@ -115,26 +122,117 @@ class SARSnapshotItem(SARConfigPV):
         super().__init__(**kwargs)
         if kwargs.get("value", None) is not None:
             self.__dict__ = kwargs
-            self.pvName = self.configPv["pvName"]  # TODO somehow does not work from the super class
+            self.pvName = self.configPv["pvName"]
             self.pvValue = self.value["value"]
+            self.type = kwargs.get("value", {}).get("type", None)
+            self.alarm = kwargs.get("value", {}).get("alarm", None)
+            self.display = kwargs.get("value", {}).get("display", None)
+            self.enum = kwargs.get("value", {}).get("enum", None)
+            if kwargs.get("readbackValue", None) is not None:
+                self.readbackPvValue = kwargs.get("readbackValue", {}).get("value", None)
+                self.readbackType = kwargs.get("readbackValue", {}).get("type", None)
+                self.readbackAlarm = kwargs.get("readbackValue", {}).get("alarm", None)
+                self.readbackDisplay = kwargs.get("readbackValue", {}).get("display", None)
+                self.readbackEnum = kwargs.get("readbackValue", {}).get("enum", None)
         else:
             raise ValueError("No value given")
 
     def __repr__(self):
+        if self.configPv["readbackPvName"] is not None:
+            return "{} / {} (RB: {} / {})".format(self.pvName, self.pvValue, self.configPv["readbackPvName"], self.readbackPvValue)
         return "{} / {}".format(self.pvName, self.pvValue)
 
+    def toJson(self, unixSec, nanoSec):
+        toReturn = {
+            "configPv": self.configPv,
+            "value": {
+                "value": self.pvValue,
+                "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+                "type": self.type if self.type is not None else {"name": "VDouble", "version": 1},
+                "alarm": self.alarm if self.alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+                "display": self.display if self.display is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+            },
+        }
 
-class SARSnapshot(SARItem):
+        if self.configPv.get("readbackPvName", None) is not None:
+            # print(self.configPv.get("readbackPvName", None))
+            toReturn["readbackValue"] = {
+                "value": self.readbackPvValue,
+                "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+                "type": self.readbackType if self.readbackType is not None else {"name": "VDouble", "version": 1},
+                "alarm": self.readbackAlarm if self.readbackAlarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+                "display": self.readbackDisplay if self.readbackDisplay is not None else {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
+            }
+
+        if self.enum is not None:
+            try:
+                toReturn["value"]["value"] = self.enum["labels"].index(toReturn["value"]["value"])
+            except Exception:
+                pass
+            toReturn["value"]["enum"] = self.enum
+            if self.configPv.get("readbackPvName", None) is not None:
+                try:
+                    toReturn["readbackValue"]["value"] = self.readbackEnum["labels"].index(toReturn["readbackValue"]["value"])
+                except Exception:
+                    pass
+                toReturn["readbackValue"]["enum"] = self.readbackEnum
+
+        return toReturn
+
+
+class SARSnapshotProto(SARItem):
+    """
+    Main interface to the snapshot-like object.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.creator = self.INIT
+        self.created = self.INIT
+        self.lastModified = self.INIT
+        self.configPVs = []
+
+    @abstractmethod
+    def getPVs(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def getReadBackPVs(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def getStoredValues(self) -> pd.DataFrame:
+        pass
+
+    @abstractmethod
+    def getStoredValue(self, pvName):
+        pass
+
+    @property
+    @abstractmethod
+    def getConfigPVs(self) -> list[SARSnapshotItem]:
+        pass
+
+    def metaData(self) -> dict:
+        return {
+            "name": self.getName(),
+            "description": self.description,
+            "creator": self.creator,
+            "created": self.created,
+            "lastModified": self.lastModified,
+            "uniqueId": self.uniqueId,
+            "properties": [] if self.properties is not None else self.properties,
+            "configPVs": self.configPVs,
+        }
+
+
+class SARSnapshot(SARSnapshotProto):
     """
     SAR Item dedicated for a given snapshot instance.
     """
 
     def __init__(self, **kwargs):
-        self.creator = self.INIT
-        self.created = self.INIT
-        self.lastModified = self.INIT
         super().__init__(**kwargs)
-        self.configPVs = []
         if kwargs.get("snapshotItems", None) is None:
             raise ValueError("Cannot initialise SARSnapshot object without snapshotItems/configPVs!")
         if kwargs.get("tags", None) is None:
@@ -155,23 +253,14 @@ class SARSnapshot(SARItem):
                 break
         return base
 
-    def metaData(self) -> dict:
-        return {
-            "name": self.getName(),
-            "description": self.description,
-            "creator": self.creator,
-            "created": self.created,
-            "lastModified": self.lastModified,
-            "uniqueId": self.uniqueId,
-            "properties": self.properties,
-            "configPVs": self.configPVs,
-        }
-
-    def getPVs(self) -> list:
+    def getPVs(self) -> list[str]:
         return list([o.configPv.get("pvName", []) for o in self.configPVs])
 
+    def getReadBackPVs(self) -> list[str]:
+        return list([o.configPv.get("readbackPvName", []) for o in self.configPVs])
+
     @property
-    def getConfigPVs(self) -> list:
+    def getConfigPVs(self) -> list[SARSnapshotItem]:
         return self.configPVs
 
     def getStoredValues(self) -> pd.DataFrame:
@@ -187,14 +276,15 @@ class SARSnapshot(SARItem):
         raise ValueError("no {} stored in this snapshot!".format(pvName))
 
 
-class SARCompositeSnapshot(SARItem):
+class SARCompositeSnapshot(SARSnapshotProto):
     """
     SAR Item dedicated for a given snapshot instance.
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.nodeType = NodeType.VIRTUAL_SNAPSHOT
+        self.nodeType = NodeType.COMPOSITE_SNAPSHOT
+        self.dirty = True
 
         if kwargs.get("properties", None) is None:
             self.properties = {"golden": "false"}
@@ -204,26 +294,34 @@ class SARCompositeSnapshot(SARItem):
 
         self.snapshots = []
         for one in kwargs.get("snapshots"):
-            if not isinstance(one, SARSnapshot):
-                raise ValueError("One of the provided snapshots is not a Snapshot!")
-                # TODO maybe just skip?
+            if not isinstance(one, SARSnapshotProto):
+                raise ValueError("One of the provided snapshots is not a Snapshot or CompositeSnapshot!")
 
             # TODO impose PV checks for double definitions, merging strtegy etc...
             # provide a callback
             self.snapshots.append(one)
 
     def __repr__(self):
-        base = "[V][ ] {} / {} ".format(self.name, self.uniqueId)
+        base = "[V][{}] {} / {} ".format("*" if self.dirty else " ", self.name, self.uniqueId)
         return base
 
+    def getSnapshotsIds(self):
+        return [s.uniqueId for s in self.snapshots]
+
     def getSnapshots(self):
-        # TODO make sure this will be not mutable (later, once ProofOfConcept done)
-        return self.snapshots
+        return [s for s in self.snapshots]
 
     def getPVs(self) -> list:
         combinedList = []
         for one in self.snapshots:
             for onePV in one.getPVs():
+                combinedList.append(onePV)
+        return list(combinedList)
+
+    def getReadBackPVs(self) -> list[str]:
+        combinedList = []
+        for one in self.snapshots:
+            for onePV in one.getReadBackPVs():
                 combinedList.append(onePV)
         return list(combinedList)
 
@@ -257,6 +355,13 @@ class SarItemBuilder:
     def getInstance(cls):
         new_instance = cls()
         return new_instance
+
+    def createFolder(
+        self,
+        name: str,
+        description: str,
+    ) -> SARFolder:
+        return SARFolder(uniqueId=self.DIRTY_SAR_ITEM, name=name, description=description, dirty=True, fullPath=self.DIRTY_SAR_ITEM)
 
     def createConfiguration(self, name: str, description: str, sarConfigPVs: list[SARConfigPV]) -> SARConfig:
         """
@@ -296,12 +401,52 @@ def _append_config(rowsList, one: SARSnapshotItem):
     )
 
 
-def _prep_snapshot_item(configPv, pvValue, unixSec, nanoSec=0):
-    return {
+def _prep_input_for_snapshot_item(
+    configPv,
+    pvValue,
+    unixSec,
+    nanoSec=0,
+    pvType=None,
+    alarm=None,
+    display=None,
+    enumOptions=None,
+    pvRbValue=None,
+    rbNanoSec=0,
+    pvRbType=None,
+    alarmRb=None,
+    displayRb=None,
+    enumRbOptions=None,
+    verb=None,
+):
+    toReturn = {
         "configPv": configPv,
-        "value": {
-            "value": pvValue,
-            "time": {"unixSec": unixSec, "nanoSec": nanoSec},
-            "alarm": {"severity": "NONE", "status": "NONE", "name": "NONE"},
+        "value": _prep_value_block(alarm, display, nanoSec, pvType, pvValue, unixSec),
+    }
+    if pvRbValue is not None:
+        toReturn["readbackValue"] = _prep_value_block(alarmRb, displayRb, nanoSec, pvRbType, pvRbValue, rbNanoSec)
+    if enumOptions is not None:
+        toReturn["value"]["enum"] = {"labels": enumOptions}
+    if enumRbOptions is not None:
+        toReturn["readbackValue"]["enum"] = {"labels": enumRbOptions}
+    # print(toReturn)
+    return toReturn
+
+
+def _prep_value_block(alarm, display, nanoSec, pvType, pvValue, unixSec):
+    return {
+        "value": pvValue,
+        "time": {"unixSec": unixSec, "nanoSec": nanoSec},
+        "type": pvType if pvType is not None else {"name": "VDouble", "version": 1},
+        "alarm": alarm if alarm is not None else {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
+        "display": display
+        if display is not None
+        else {
+            "lowDisplay": 0.0,
+            "highDisplay": 0.0,
+            "units": "",
+            "lowAlarm": 0,
+            "highAlarm": 0,
+            "lowWarning": 0,
+            "highWarning": 0,
         },
     }

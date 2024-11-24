@@ -196,7 +196,7 @@ class EndPointArchiver(EndPoint):
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date, end_date)
         if not entries:
-            config.printVerbose(f"No data found for '{PV}', trying earlier than: start:{start_date} until {end_date}")
+            config.printVerbose(f"No data found for '{PV}', trying earlier than: start: {start_date} until {end_date}")
         # TODO see if the recursive call should be here
         # TODO see if implicit calc def here is needed
         if entries_limit is None:

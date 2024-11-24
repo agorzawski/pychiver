@@ -1,5 +1,8 @@
 # Examples *Save and Restore*
 > Disclaimer: **This is a prototype for the python service connection for save and restore service. Use at your own risk**
+>
+>This module is using `p4p` with `pva` to interact with epics network.
+
 
 ## Service
 
@@ -104,17 +107,14 @@ status = sar.restore(snapshot=some_snapshot)
 #returns 0 if all restored, rises ValueError, EpicsError in case of issues
 ```
 
-### Actions to create, take and/or interact
+### Actions to create, take and/or interact (authentication needed!)
 > General  note: All snapshots created, taken and/or manipulated via the following have flag `dirty=True` to signal that they are NOT the service copy
 
-
-
-#### To create a virtual snapshot
+#### To create a folder
 
 ```python
 from pychiver.sardomain import SarItemBuilder
-snapshots = [snapshot1, snapshot2]
-vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(self, name, snapshots)
+folder = SarItemBuilder.getInstance().createFolder(name, description)
 ```
 
 
@@ -124,41 +124,75 @@ vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(self, name, snaps
 from pychiver.sardomain import SarItemBuilder
 
 some_config = SarItemBuilder.getInstance().createConfiguration(
-  sarConfigPVs=[SARConfigPV(pvName="SomePV1"),
+  sarConfigPVs=[SARConfigPV(pvName="SomePV1", readbackPvName="SomePV1-RB")),
                 SARConfigPV(pvName="SomePV2"),
                 SARConfigPV(pvName="SomePV3")],
-  name="Configuration created via python",
+  name="Configuration created via python package",
   description="Some needed description")
 
 ```
-#### Take new snapshot:
+#### Take a new snapshot:
 
 
 ```python
 # live values
 some_snapshot_retake = sar.takeSnapshot(some_config,
-                                 newName="Values After setup",
-                                 newDescription="Feb2024")
+                                        newName="Values After setup",
+                                        newDescription="Feb2024")
 
-# or take with fixed values
-setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": 666.0,}
-some_snapshot = sar.takeSnapshot(some_config, setValues=setValues,
+# (otional) prepare with fixed SetPoint values
+setValues = {"SomePV1": 10.0, "SomePV2": 112.0, "SomePV3": "Disabled",}
+# (optiona) prep with fixed Readback values (if applicable)
+setReadbackValues = {"SomePV1_RB": -1.0}
+
+some_snapshot = sar.takeSnapshot(some_config, # see example above!
+                                 setValues=setValues, # if this optional argument is not given, live values are used!
+                                 setReadbackValuest=setReadbackValues, # if this optional argument is not given, live values are used!
                                  newName="Values From the DB",
                                  newDescription="from the tests back on Nov2023")
 ```
 
-> Note1: `setValues` does not have to be all PVs, in case manual one `setValue` is not provided
+> NOTE: for the `enum` type values can be either "string option" or int ordinal. Eg. 'Probe' or 1
+
+#### To create a virtual snapshot
+
+```python
+from pychiver.sardomain import SarItemBuilder
+snapshots = [snapshot1, snapshot2]
+vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(name, description, snapshots)
+```
+
+
+> **Note** at this call a live call (pvget) will be executed to establish types of PVs and their 'now' value(s)
+
+> Note1: `setValues` does not have to be all PVs, in case user one `setValue` is not provided
 > the one currently fetched from live epics is kept.
 
+> Note2: There is an ongoing development. Only main types of PVs: Scalar, Arrays (Double and Int), Enum
+> are tested and working...
 
 
-#### To save them in the service:
+#### To SAVE the item in the service:
+
+> Note: to interact with the service, one needs to authenticate:
 ```python
-config = sar.save(sarItem=some_config, parentNodeId='<folder uniqueId>', author="joe foo")
-#or
-snapshot = sar.save(sarItem=some_snapshot, parentNodeId='configUniqueId', author="joe foo")
+sar = SaveAndRestore(username="somename", password="somepass")
+
+# or if you have an instance running, i.e. jupyter notebook
+
+sar.authenticate(username="somename", password="somepass")
 ```
-> A succesfull save, updates the result with the correct `uniqueId` and sets `dirty=False`
+
+```python
+folder = sar.save(sarItem=some_folder, parentNodeId='<folder uniqueId>')
+#or
+config = sar.save(sarItem=some_config, parentNodeId='<folder uniqueId>')
+#or
+snapshot = sar.save(sarItem=some_snapshot, parentNodeId='configUniqueId')
+# or
+compositeSnapshot = sar.save(sarItem=compositeSnapshot, parentNodeId='<folder uniqueId>')
+```
+> A successful save, updates the result with the correct `uniqueId` and sets `dirty=False`
 
 > No virtual snapshots to be saved  yet via this package, this is deferred WIP.
 
@@ -169,5 +203,5 @@ The main objects are:
 - `SARConfigPV` - simple configuration for one PV,
 - `SARSnapshotItem` - snapshot item holding individual ConfigPV and its snapshoted value,
 - `SARSnapshot` - snapshot that contains the stored SARSnapshotItems,
-- `SARVirtualSnapshot` - virtual snapshot that holds provided snapshots' references and provides the
+- `SARCompositeSnapshot` - virtual snapshot that holds provided snapshots' references and provides the
   combined actions (e.g. compare, restore) on all of them at once

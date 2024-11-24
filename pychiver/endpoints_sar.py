@@ -31,7 +31,6 @@ from .sardomain import *
 import json
 import requests
 from requests.adapters import HTTPAdapter
-from requests.auth import HTTPBasicAuth
 from requests.packages.urllib3.util.retry import Retry
 import os
 from datetime import datetime
@@ -56,7 +55,7 @@ class SaveAndRestoreEndPoint(ABC):
         pass
 
     @abstractmethod
-    def saveSarItem(self, sarItem: SARItem, parentId=None, author=None):
+    def saveSarItem(self, sarItem: SARSnapshot | SARConfig, parentId=None):
         pass
 
     @abstractmethod
@@ -82,7 +81,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
     JMASAR EndPoint following the REST API exposed by the https://gitlab.esss.lu.se/ics-software/jmasar-service
     """
 
-    def __init__(self, service_url=None):
+    def __init__(self, service_url=None, username=None, password=None):
         if service_url is None:
             service_url = os.getenv("SAVE_AND_RESTORE_URL", None)
         super().__init__(service_url=service_url)
@@ -99,30 +98,44 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_snapshots = "{}/snapshots".format(self.service_url)
         self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
+        self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
+        self.url_restore = "{}/restore/node?parentNodeId={{}}".format(self.service_url)
 
+        self._session = None
+        self._username = None
+        self.authenticate(username, password)
+
+    def authenticate(self, username=None, password=None):
         self._session = requests.Session()
+        if username is not None and password is not None:
+            self._username = username
+            self._session.auth = (username, password)
+        else:
+            warnings.warn("[pychiver:SaveRestoreService] No user/password authenticated. Running in the ReadOnlyMode")
         retry = Retry(connect=5, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
         self._session.mount("https://", adapter)
 
     def _getRequest(self, url):
-        # print('Asking for ', url)
         r = self._session.get(url, verify=False)
         if r.status_code == 200:
             jsonContent = json.loads(r.content)
-            # print(jsonContent)
         else:
             raise ValueError("Bad Request: " + r.content)
         return jsonContent
 
-    def _postRequest(self, url, payloadJson, auth=None):
-        r = self._session.post(url, files=payloadJson, auth=auth, verify=False)
+    def _postRequest(self, url, payloadJson):
+        r = self._session.post(url, files=payloadJson, verify=False)
+        if r.status_code != 200:
+            warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
 
-    def _putRequest(self, url, payloadJson, auth=None):
+    def _putRequest(self, url, payloadJson, auth=None, debug=False):
+        if debug:
+            print("PUT: ", payloadJson)
         r = self._session.put(url, json=payloadJson, auth=auth, verify=False, headers={"Content-Type": "application/json"})
         if r.status_code != 200:
-            warnings.warn("[pychiver:SaveRestore ENDPOINT] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
+            warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
 
     def status(self):
@@ -138,8 +151,6 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         uniqueId = json_data_Node["uniqueId"]
         if json_data_Node["nodeType"] == "SNAPSHOT":
             json_data = self._getRequest(self.url_snapshot.format(uniqueId))
-            # print('===== [ RAW SNAPSHOT data from the API] >>>')
-            # print(json_data_Node)
             json_data["uniqueId"] = json_data_Node["uniqueId"]
             json_data["name"] = json_data_Node["name"]
             json_data["description"] = json_data_Node["description"]
@@ -149,82 +160,88 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             json_data["tags"] = json_data_Node["tags"]
             return SARSnapshot(**json_data)
         elif json_data_Node["nodeType"] == "CONFIGURATION":
-            # print('===== [ RAW CONFIGURATION data from the API] >>>')
-            # print(json_data_Node)
             json_data = self._getRequest(self.url_config.format(uniqueId))
             json_data["uniqueId"] = json_data_Node["uniqueId"]
             json_data["name"] = json_data_Node["name"]
             json_data["description"] = json_data_Node["description"]
             return SARConfig(**json_data)
         elif json_data_Node["nodeType"] == "FOLDER":
-            deepestFolder = [json_data_Node["name"]]
-            rootFolder = "Root" in json_data_Node["name"] or "root" in json_data_Node["name"]
-            json_data_rep = json_data_Node
-            while not rootFolder:
-                json_data_rep = self._getRequest(self.url_parent.format(json_data_rep["uniqueId"]))
-                rootFolder = "Root" in json_data_rep["name"] or "root" in json_data_rep["name"]
-                deepestFolder.append(json_data_rep["name"])
-            fullPath = "/".join(deepestFolder[::-1])
+            fullPath = self._findRootFolder(json_data_Node)
             return SARFolder(**{**json_data_Node, "fullPath": fullPath})
         else:
             raise ValueError("Provided data is not a valid format! Maybe something wrong with the request type?")
 
-    def saveSarItem(self, sarItem: SARSnapshot | SARConfig, parentId=None, author=None):
+    def _findRootFolder(self, json_data_Node):
+        deepestFolder = [json_data_Node["name"]]
+        rootFolder = "Root" in json_data_Node["name"] or "root" in json_data_Node["name"]
+        json_data_rep = json_data_Node
+        while not rootFolder:
+            json_data_rep = self._getRequest(self.url_parent.format(json_data_rep["uniqueId"]))
+            rootFolder = "Root" in json_data_rep["name"] or "root" in json_data_rep["name"]
+            deepestFolder.append(json_data_rep["name"])
+        fullPath = "/".join(deepestFolder[::-1])
+        return fullPath
+
+    def saveSarItem(self, sarItem: SARSnapshot | SARConfig | SARFolder, parentId=None, debug=False):
         """
         following the https://github.com/ControlSystemStudio/phoebus/blob/master/services/save-and-restore/doc/index.rst
-        :param sarItem:
-        :param parentId:
-        :param author:
+        :param debug: for service request visibility, default False
+        :param sarItem: The SaveRestore Object to persist in the service
+        :param parentId: The uniqueId of the parent node (folder/configuration)
         :return:
         """
-        # TODO might be that this one will need to be taken all the way out after new SR Roles come
-        auth = HTTPBasicAuth(author, "12345678abcd")
+        if isinstance(sarItem, SARFolder):
+            folderPayload = {"userName": self._username, "name": sarItem.getName(), "description": sarItem.description, "type": sarItem.getType()}
+            result = self._putRequest(url=self.url_node_put.format(parentId), payloadJson=folderPayload, debug=debug)
+            if result.status_code == 200:
+                sarItem.dirty = False
+                sarItem.uniqueId = json.loads(result.content)["uniqueId"]
+                sarItem.fullPath = self._findRootFolder(json.loads(result.content))
+                warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
 
-        if isinstance(sarItem, SARConfig):
+        elif isinstance(sarItem, SARConfig):
             configPayload = {
-                "configurationNode": {"userName": author, "name": sarItem.getName(), "description": sarItem.description, "type": "CONFIGURATION"},
-                "configurationData": {"pvList": [{"pvName": one.pvName} for one in sarItem.configList]},
-                # TODO include additional stuff readback and readonly (see what format None/null True/true)
+                "configurationNode": {"userName": self._username, "name": sarItem.getName(), "description": sarItem.description, "type": sarItem.getType()},
+                "configurationData": {
+                    "pvList": [{"pvName": one.pvName, "readbackPvName": one.readbackPvName, "readOnly": one.readOnly} for one in sarItem.configList]
+                },
             }
-            result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload, auth=auth)
+            result = self._putRequest(url=self.url_config_put.format(parentId), payloadJson=configPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
                 sarItem.uniqueId = json.loads(result.content)["configurationNode"]["uniqueId"]
+                warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
 
         elif isinstance(sarItem, SARSnapshot):
-            t = int(datetime.now().timestamp())
             snapPayload = {
                 "snapshotNode": {
                     "name": sarItem.getName(),
                     "description": sarItem.description,
-                    "userName": author,
+                    "userName": self._username,
+                    "nodeType": sarItem.getType(),
                 },
-                "snapshotData": {
-                    "snapshotItems": [
-                        {
-                            "configPv": {
-                                "pvName": o.pvName,
-                            },
-                            "value": {
-                                "type": {"name": "VDouble", "version": 1},
-                                "value": o.pvValue,
-                                "alarm": {"severity": "NONE", "status": "NONE", "name": "NO_ALARM"},
-                                "time": {"unixSec": t, "nanoSec": 0},
-                                "display": {"lowDisplay": 0.0, "highDisplay": 0.0, "units": ""},
-                            },
-                        }
-                        for o in sarItem.getConfigPVs
-                    ]
-                },
+                "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in sarItem.getConfigPVs]},
             }
-            # print("===> Just Before Upload")
-            # print(snapPayload)
-            result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload, auth=auth)
+            result = self._putRequest(url=self.url_snapshot_put.format(parentId), payloadJson=snapPayload, debug=debug)
             if result.status_code == 200:
                 sarItem.dirty = False
                 sarItem.uniqueId = json.loads(result.content)["snapshotNode"]["uniqueId"]
+                warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
+
+        elif isinstance(sarItem, SARCompositeSnapshot):
+            snapPayload = {
+                "compositeSnapshotNode": {"name": sarItem.name, "nodeType": sarItem.getType(), "userName": self._username, "description": sarItem.description},
+                "compositeSnapshotData": {
+                    "referencedSnapshotNodes": [one for one in sarItem.getSnapshotsIds()],
+                },
+            }
+            result = self._putRequest(url=self.url_composite_nodes_put.format(parentId), payloadJson=snapPayload, debug=debug)
+            if result.status_code == 200:
+                sarItem.dirty = False
+                sarItem.uniqueId = json.loads(result.content)["compositeSnapshotNode"]["uniqueId"]
+                warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
         else:
-            raise NotImplementedError("Saving only for SARConfig/SARSnapshot!")
+            raise NotImplementedError("Saving only for SARConfig/SARSnapshot/SARFolder!")
 
     def getCompositeSnapshotStub(self, uniqueId):
         a = self._getRequest(self.url_composite.format(uniqueId))
@@ -244,7 +261,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             for one in self._getRequest(self.url_snapshots):
                 toReturn.append(SARItem(**one))
 
-        elif nodeType == NodeType.VIRTUAL_SNAPSHOT:
+        elif nodeType == NodeType.COMPOSITE_SNAPSHOT:
             for one in self._getRequest(self.url_snapshots):
                 if "COMPOSITE" in one["nodeType"]:
                     toReturn.append(SARItem(**one))
@@ -253,8 +270,13 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             for one in self._getRequest(self.url_snapshots):
                 if one["nodeType"] in nodeType.name:
                     toReturn.append(self.getSarItem(one["uniqueId"]))
+
+        elif nodeType == NodeType.CONFIGURATION:
+            for one in self._getRequest(self.url_snapshots):
+                r = self._getRequest(self.url_parent.format(one["uniqueId"]))
+                toReturn.append(self.getSarItem(r["uniqueId"]))
         else:
-            raise NotImplementedError("Only Definitions of Snapshots&Composite for now. No other types supported yet!")
+            raise NotImplementedError("Only Definitions of Configurations, Snapshots & Composite for now. No other types supported yet!")
 
         for one in toReturn:
             mainTree[one.uniqueId] = one
@@ -280,3 +302,10 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_parent.format(uniqueId)
         return self._fromNode_toSAR(self._getRequest(urlToGet))
+
+    def restore(self, snapshot: SARSnapshot):
+        if isinstance(snapshot, SARSnapshot):
+            r = self._postRequest(self.url_restore.format(snapshot.uniqueId), payloadJson={})
+            if r.status_code == 200:
+                warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
+        warnings.warn("[pychiver:SaveRestoreService] {} cannot restore non SnapshotItem!".format(snapshot))
