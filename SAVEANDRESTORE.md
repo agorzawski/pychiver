@@ -100,7 +100,7 @@ syslog:> check state on: 2022-06-13 19:21:21
 
 > **NOTE** the restore (pvput) action is executed where the client package is running. **You may not have a privilege** (due to the network configuration) to successfully execute your call.
 
->  the following works for the `some_snapshot` being `SARSnapshot` or `SARVirtualSnapshot`
+>  the following works for the `some_snapshot` being `SARSnapshot` or `SARCompositeSnapshot`
 
 ```python
 status = sar.restore(snapshot=some_snapshot)
@@ -154,12 +154,14 @@ some_snapshot = sar.takeSnapshot(some_config, # see example above!
 
 > NOTE: for the `enum` type values can be either "string option" or int ordinal. Eg. 'Probe' or 1
 
-#### To create a virtual snapshot
+> **NOTE:** All locally created SAR items are _"dirty=True"_ (in the console `[*]`) until the successful save operation is performed!
+
+#### To create a composite snapshot
 
 ```python
 from pychiver.sardomain import SarItemBuilder
 snapshots = [snapshot1, snapshot2]
-vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(name, description, snapshots)
+vSnapshot = SarItemBuilder.getInstance().createCompositeSnapshot(name, description, snapshots)
 ```
 
 
@@ -167,7 +169,7 @@ vSnapshot = SarItemBuilder.getInstance().createVirtualSnapshot(name, description
 
 > Note1: `setValues` does not have to be all PVs, in case user one `setValue` is not provided
 > the one currently fetched from live epics is kept.
-
+ś
 > Note2: There is an ongoing development. Only main types of PVs: Scalar, Arrays (Double and Int), Enum
 > are tested and working...
 
