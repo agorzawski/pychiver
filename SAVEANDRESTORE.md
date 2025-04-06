@@ -51,6 +51,13 @@ sar.getSnapshots(configUniqueId='configUniqueId')
 # returns a dict of snapshot name to a SARSnapshot objects
 ```
 
+#### To get folder content:
+```python
+sar.getFolderContent(folderId='someId')
+# returns a dict of SARItem to SARItem objects representing the hierarchy
+```
+>**NOTE** it may be an expressive call if a folder contains many items, as it will fetch all items
+
 ### Actions (read)
 >  the following works for the `some_snapshot` being `SARSnapshot` or `SARCompositeSnapshot`
 

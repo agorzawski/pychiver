@@ -154,6 +154,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         return self._fromNode_toSAR(json_data_Node)
 
     def _fromNode_toSAR(self, json_data_Node) -> SARItem:
+        print(json_data_Node)
         uniqueId = json_data_Node["uniqueId"]
         if json_data_Node["nodeType"] == "SNAPSHOT":
             json_data = self._getRequest(self.url_snapshot.format(uniqueId))
@@ -174,6 +175,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         elif json_data_Node["nodeType"] == "FOLDER":
             fullPath = self._findRootFolder(json_data_Node)
             return SARFolder(**{**json_data_Node, "fullPath": fullPath})
+        elif json_data_Node["nodeType"] == "COMPOSITE_SNAPSHOT":
+            return self.getCompositeSnapshot(json_data_Node["uniqueId"])
         else:
             raise ValueError("Provided data is not a valid format! Maybe something wrong with the request type?")
 
@@ -255,6 +258,19 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         json_data_Node["referencedSnapshotNodes"] = a["referencedSnapshotNodes"]
         return json_data_Node
 
+    def getCompositeSnapshot(self, snapshotId, snapshotName=None):
+        json = self.getCompositeSnapshotStub(snapshotId)
+        snapshots = []
+        for oneSnapshotId in json["referencedSnapshotNodes"]:
+            a = self.getSarItem(oneSnapshotId)
+            if isinstance(a, SARSnapshot):
+                snapshots.append(a)
+            else:
+                aInception = self.getCompositeSnapshot(oneSnapshotId)
+                for oneS in aInception.getSnapshots():
+                    snapshots.append(oneS)
+        return SARCompositeSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
+
     def getRoot(self):
         json_data = self._getRequest(self.service_url_root)
         return SARItem(**json_data)
@@ -277,7 +293,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                 if one["nodeType"] in nodeType.name:
                     toReturn.append(self.getSarItem(one["uniqueId"]))
 
-        ## TODO reenable when https://jira.ess.eu/browse/CSSTUDIO-3173 is fixed
+        # TODO reenable when https://jira.ess.eu/browse/CSSTUDIO-3173 is fixed
         # elif nodeType == NodeType.CONFIGURATION:
         #     print("Getting all configurations")
         #     for one in self._getRequest(self.url_config):
@@ -300,7 +316,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_child.format(uniqueId)
         if forcedTypeTuple is None:
-            return self._getRequest(urlToGet)  # TODO apply self._fromNode_toSAR()
+            print(urlToGet)
+            return [self._fromNode_toSAR(a) for a in self._getRequest(urlToGet)]  # TODO apply self._fromNode_toSAR()
         else:
             toReturn = []
             for one in self._getRequest(urlToGet):

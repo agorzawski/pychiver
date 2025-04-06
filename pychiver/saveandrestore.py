@@ -227,17 +227,25 @@ class SaveAndRestore:
         """
         :return: a composite snapshot
         """
-        json = self.service.getCompositeSnapshotStub(snapshotId)
-        snapshots = []
-        for oneSnapshotId in json["referencedSnapshotNodes"]:
-            a = self.service.getSarItem(oneSnapshotId)
-            if isinstance(a, SARSnapshot):
-                snapshots.append(a)
+        return self.service.getCompositeSnapshot(snapshotId=snapshotId, snapshotName=snapshotName)
+
+    def getFolderContent(self, folderId: str = None, sarFolder: SARFolder = None) -> dict:
+        if folderId is not None and sarFolder is not None:
+            raise ValueError("Cannot use both criteria (folderId or sarFolder)")
+        if sarFolder is not None:
+            folderId = sarFolder.uniqueId
+
+        toReturn = {}
+        folder = self.getFolder(folderId=folderId)
+        children = self.service.getChildren(folder.uniqueId)
+        for one in children:
+            if one.isOfType(NodeType.FOLDER):
+                toReturn[one] = self.getFolderContent(folderId=one.uniqueId)
+            elif one.isOfType(NodeType.CONFIGURATION):
+                toReturn[one] = self.getFolderContent(folderId=one.uniqueId)
             else:
-                aInception = self.getCompositeSnapshot(oneSnapshotId)
-                for oneS in aInception.getSnapshots():
-                    snapshots.append(oneS)
-        return SARCompositeSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
+                toReturn[one] = one
+        return toReturn
 
     def getFolder(self, folderId: str = None, folderName: str = None) -> SARFolder:
         return self.getNode(uniqueId=folderId, nodeName=folderName, nodeType=NodeType.FOLDER)

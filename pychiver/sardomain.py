@@ -45,6 +45,9 @@ class SARItem:
     def getType(self) -> str:
         return self.nodeType.name
 
+    def isOfType(self, nodeType: NodeType) -> bool:
+        return self.nodeType == nodeType
+
     def getName(self) -> str:
         return self.name
 
