@@ -162,7 +162,9 @@ class SaveAndRestore:
         else:
             raise NotImplementedError("Taking snapshots ONLY from the SarConfig for now (Work in Progress)!")
 
-    def getNode(self, uniqueId: str = None, nodeName: str = None, nodeType: NodeType = None) -> SARItem | SARFolder | SARConfig | SARSnapshot | SARCompositeSnapshot:
+    def getNode(
+        self, uniqueId: str = None, nodeName: str = None, nodeType: NodeType = None
+    ) -> SARItem | SARFolder | SARConfig | SARSnapshot | SARCompositeSnapshot:
         if nodeName is not None and uniqueId is not None:
             raise NotImplementedError("Cannot use both criteria (nodeId or nodeName)")
         if uniqueId is not None:
@@ -259,7 +261,6 @@ class SaveAndRestore:
         else:
             # print(self.cachedConfigurations)
             return self.cachedConfigurations
-
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
