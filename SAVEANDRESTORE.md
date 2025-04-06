@@ -1,3 +1,5 @@
+from setuptools.sandbox import save_argvfrom zipfile import stringEndArchive
+
 # Examples *Save and Restore*
 > Disclaimer: **This is a prototype for the python service connection for save and restore service. Use at your own risk**
 >
@@ -22,17 +24,26 @@ snapshotsAll = sar.getAll()
 # returns a dict of uniqueId to Snapshot
 ```
 
-#### To get a specific configuration or snapshot:
+#### To get a specific configuration, snapshot or any specific/generic node:
 
 ```python
 sar.getConfiguration(configId="1c5e67db-9b08-496f-85ec-8c1dc849e021")
 sar.getSnapshot(snapshotId='5314e53b-b7c1-432c-b996-0733f28fd15c')
-# returns a snapshot
+sar.getCompositeSnapshot(snapshotId='someId')
+sar.getFolder(folderId='someOtherId')
 
+# returns a node by name, if more than one found with the same name, it returns the most recent one.
 sar.getConfiguration(configName="blah")
 sar.getSnapshot(snapshotName='Some name of the snapshot')
-# returns a snapshot, if more than one found with the same name, it returns the most recent one.
+sar.getCompositeSnapshot(snapshotName='Some name of the snapshot')
+sar.getFolder(folderName='Some name of the folder')
 ```
+
+or use the generic call
+```python
+sar.getNode(nodeId='someOtherId')
+```
+
 #### To get all snapshots for a given configuration:
 > To get _a real_ `configUniqueId` (or any `uniqueId`) one can use Phoebus App and copy/paste it from there
 ```python

@@ -147,7 +147,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
     def status(self):
         print(self.__dict__)
 
-    def getSarItem(self, uniqueId) -> SARItem:
+    def getSarItem(self, uniqueId) -> SARItem | SARSnapshot | SARConfig | SARFolder:
         if uniqueId is None:
             raise ValueError("cannot search for None uniqueId!")
         json_data_Node = self._getRequest(self.url_node.format(uniqueId))
@@ -277,10 +277,17 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                 if one["nodeType"] in nodeType.name:
                     toReturn.append(self.getSarItem(one["uniqueId"]))
 
-        elif nodeType == NodeType.CONFIGURATION:
-            for one in self._getRequest(self.url_snapshots):
-                r = self._getRequest(self.url_parent.format(one["uniqueId"]))
-                toReturn.append(self.getSarItem(r["uniqueId"]))
+        ## TODO reenable when https://jira.ess.eu/browse/CSSTUDIO-3173 is fixed
+        # elif nodeType == NodeType.CONFIGURATION:
+        #     print("Getting all configurations")
+        #     for one in self._getRequest(self.url_config):
+        #         r = self._getRequest(self.url_parent.format(one["uniqueId"]))
+        #         toReturn.append(self.getSarItem(r["uniqueId"]))
+        #
+        # elif nodeType == NodeType.FOLDER:
+        #     for one in self._getRequest(self.url_node):
+        #         r = self._getRequest(self.url_parent.format(one["uniqueId"]))
+        #         toReturn.append(self.getSarItem(r["uniqueId"]))
         else:
             raise NotImplementedError("Only Definitions of Configurations, Snapshots & Composite for now. No other types supported yet!")
 

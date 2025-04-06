@@ -162,6 +162,23 @@ class SaveAndRestore:
         else:
             raise NotImplementedError("Taking snapshots ONLY from the SarConfig for now (Work in Progress)!")
 
+    def getNode(self, uniqueId: str = None, nodeName: str = None, nodeType: NodeType = None) -> SARItem | SARFolder | SARConfig | SARSnapshot | SARCompositeSnapshot:
+        if nodeName is not None and uniqueId is not None:
+            raise NotImplementedError("Cannot use both criteria (nodeId or nodeName)")
+        if uniqueId is not None:
+            try:
+                return self.service.getSarItem(uniqueId)
+            except JSONDecodeError:
+                warnings.warn("[pychiver:SaveRestore] Something went wrong with finding " "the provided nodeId='{}'".format(uniqueId))
+        if nodeName is not None:
+            allNodes = self.getAll(nodeType=nodeType)
+            for one in allNodes.values():
+                print(one.name)
+                if nodeName in one.name:
+                    return self.getNode(uniqueId=one.uniqueId)
+
+        raise ValueError("Cannot find the node for a provided nodeId '{}' or nodeName '{}'".format(uniqueId, nodeName))
+
     def getSnapshot(self, snapshotId: str = None, snapshotName: str = None, sarItem: SARItem = None) -> SARSnapshot:
         """
         Returns one snapshot from the service selected by a provided unique ID
@@ -175,17 +192,7 @@ class SaveAndRestore:
             raise NotImplementedError("Cannot use both criteria (snapshotId or snapshotName)")
         if sarItem is not None and not sarItem.dirty:
             return self.service.getSarItem(sarItem.uniqueId)
-        if snapshotId is not None:
-            try:
-                return self.service.getSarItem(snapshotId)
-            except JSONDecodeError:
-                warnings.warn("[pychiver:SaveRestore] Something went wrong with finding " "the provided snapshotId='{}'".format(snapshotId))
-        if snapshotName is not None:
-            allSnapshots = self.getAll()
-            for one in allSnapshots.values():
-                if snapshotName in one.name:
-                    return self.getSnapshot(snapshotId=one.uniqueId)
-        raise ValueError("Cannot find the snapshot for a provided snapshotId or snapshotName '{}'".format(snapshotName))
+        return self.getNode(uniqueId=snapshotId, nodeName=snapshotName, nodeType=NodeType.SNAPSHOT)
 
     def getSnapshots(self, config: SARConfig = None, configUniqueId: str = None) -> dict:
         """
@@ -216,7 +223,7 @@ class SaveAndRestore:
 
     def getCompositeSnapshot(self, snapshotId: str = None, snapshotName: str = None) -> SARCompositeSnapshot:
         """
-        :return: a virtual snapshot
+        :return: a composite snapshot
         """
         json = self.service.getCompositeSnapshotStub(snapshotId)
         snapshots = []
@@ -229,6 +236,12 @@ class SaveAndRestore:
                 for oneS in aInception.getSnapshots():
                     snapshots.append(oneS)
         return SARCompositeSnapshot(uniqueId=json["uniqueId"], name=json["name"], snapshots=snapshots)
+
+    def getFolder(self, folderId: str = None, folderName: str = None) -> SARFolder:
+        return self.getNode(uniqueId=folderId, nodeName=folderName, nodeType=NodeType.FOLDER)
+
+    def getConfiguration(self, configId: str = None, configName: str = None) -> SARConfig:
+        return self.getNode(uniqueId=configId, nodeName=configName, nodeType=NodeType.CONFIGURATION)
 
     def getAll(self, useCache=False, nodeType=NodeType.SNAPSHOT) -> dict[str | SARSnapshot]:
         """
@@ -247,19 +260,6 @@ class SaveAndRestore:
             # print(self.cachedConfigurations)
             return self.cachedConfigurations
 
-    def getConfiguration(self, configId: str = None, configName: str = None) -> SARConfig:
-        # TODO provide an easy way to search through the configurations (ie. without pulling all conf every time)
-        # this has also a dedicated task the https://gitlab.esss.lu.se/ics-software/jmasar-service
-        if configId is not None:
-            item = self.service.getSarItem(configId)
-            if isinstance(item, SARConfig):
-                return item
-        if configName is not None:
-            for one in self.getAll(nodeType=NodeType.CONFIGURATION).values():
-                if configName in one.name:
-                    return self.getConfiguration(configId=one.uniqueId)
-
-        raise ValueError("Given UniqueId {} is not for the configuration.".format(configId))
 
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
