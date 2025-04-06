@@ -242,6 +242,7 @@ class ArchiverWaveformCollector(WaveformCollector):
         # TODO initialize the auto refresh to call self._callback()
 
     def _fetch_values(self, PV, start_date, end_date=None, force_non_archived=False, max_number_of_hours_back=24):
+        # print(f"Fetching data from archiver for {PV} at {start_date} to {end_date}")
         return self._archiver.getWaveform(
             PV,
             start_date=start_date,

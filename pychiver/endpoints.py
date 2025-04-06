@@ -69,7 +69,7 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
         dataset["time_dt"] = dataset.apply(lambda row: datetime.datetime.utcfromtimestamp(row["secs_nanos"]).replace(tzinfo=tz.UTC), axis=1)
 
     if len(dataset) < 2:
-        if len(dataset) and isinstance(dataset["val"][0], list):
+        if len(dataset) and len(dataset["val"][0]):
             _append_data()
             return dataset
 
