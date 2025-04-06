@@ -61,6 +61,7 @@ class SaveAndRestore:
         Epics=Context("pva"),
         cacheFile=None,
         archiver_url: str = None,
+        disable_ssl_warnings: bool = False,
     ):
         """
         Initialises the client class for Save and Restore taking one obligatory argument that is the service URL.
@@ -79,6 +80,8 @@ class SaveAndRestore:
         warnings.warn("[pychiver:SaveRestore] This is a prototype, use with caution!")
         self._username = username
         self.service = DefaultImplementation(service_url=service_url, username=username, password=password)
+        if disable_ssl_warnings:
+            self.service.disable_warnings()
         self.epics = Epics
         self.cachedConfigurations = {}
         self.cacheFile = None

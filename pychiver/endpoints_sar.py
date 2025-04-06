@@ -50,6 +50,12 @@ class SaveAndRestoreEndPoint(ABC):
             )
         self.service_url = service_url
 
+    @staticmethod
+    def disable_warnings():
+        warnings.warn("[pychiver:SaveRestoreService] Disabled SSL warnings!")
+        warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+        requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
     @abstractmethod
     def getSarItem(self, uniqueId) -> SARItem:
         pass
