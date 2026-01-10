@@ -270,6 +270,16 @@ class SaveAndRestore:
             # print(self.cachedConfigurations)
             return self.cachedConfigurations
 
+    def getReferenced(self, base: SARSnapshot | SARCompositeSnapshot | str):
+        """
+        Finds the referencing composite snapshots, or empty list if nothing is referencing.
+        """
+        if isinstance(base, SARSnapshot) or isinstance(base, SARCompositeSnapshot):
+            return self.service.getReferenced(snapshotId=base.uniqueId)
+        if isinstance(base, str):
+            return self.service.getReferenced(snapshotId=base)
+        raise ValueError(f"Service not able to find references to {base}, maybe wrong type? Use only string, SARSnapshot | SARCompositeSnapshot.")
+        
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
         Provides the true/false result of the comparison for a given snapshot.

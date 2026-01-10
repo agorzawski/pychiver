@@ -106,7 +106,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
         self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
         self.url_restore = "{}/restore/node?parentNodeId={{}}".format(self.service_url)
-
+        self.url_search_referenced  = "{}/search?referenced={{}}".format(self.service_url)
+        
         self._session = None
         self._username = None
         self.authenticate(username, password)
@@ -154,7 +155,6 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         return self._fromNode_toSAR(json_data_Node)
 
     def _fromNode_toSAR(self, json_data_Node) -> SARItem:
-        print(json_data_Node)
         uniqueId = json_data_Node["uniqueId"]
         if json_data_Node["nodeType"] == "SNAPSHOT":
             json_data = self._getRequest(self.url_snapshot.format(uniqueId))
@@ -258,6 +258,13 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         json_data_Node["referencedSnapshotNodes"] = a["referencedSnapshotNodes"]
         return json_data_Node
 
+    def getReferenced(self, snapshotId):
+        json = self._getRequest(self.url_search_referenced.format(snapshotId))
+        toReturn = []
+        for one in json["nodes"]:
+            toReturn.append(self._fromNode_toSAR(one))
+        return toReturn
+    
     def getCompositeSnapshot(self, snapshotId, snapshotName=None):
         json = self.getCompositeSnapshotStub(snapshotId)
         snapshots = []
@@ -316,7 +323,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_child.format(uniqueId)
         if forcedTypeTuple is None:
-            print(urlToGet)
+            #print(urlToGet)
             return [self._fromNode_toSAR(a) for a in self._getRequest(urlToGet)]  # TODO apply self._fromNode_toSAR()
         else:
             toReturn = []
