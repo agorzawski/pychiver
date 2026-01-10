@@ -69,9 +69,10 @@ def _fix(dataset: pandas.DataFrame, start_date, end_date) -> pandas.DataFrame:
         dataset["time_dt"] = dataset.apply(lambda row: datetime.datetime.utcfromtimestamp(row["secs_nanos"]).replace(tzinfo=tz.UTC), axis=1)
 
     if len(dataset) < 2:
-        if len(dataset) and len(dataset["val"][0]):
-            _append_data()
-            return dataset
+        if len(dataset) and hasattr(dataset["val"].iloc[0], "__len__"):
+            if len(dataset["val"].iloc[0]) > 0:
+                _append_data()
+                return dataset
 
         from .calculations import LinearInterpolationStrategy
 
