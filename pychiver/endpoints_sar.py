@@ -106,8 +106,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
         self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
         self.url_restore = "{}/restore/node?parentNodeId={{}}".format(self.service_url)
-        self.url_search_referenced  = "{}/search?referenced={{}}".format(self.service_url)
-        
+        self.url_search_referenced = "{}/search?referenced={{}}".format(self.service_url)
+
         self._session = None
         self._username = None
         self.authenticate(username, password)
@@ -131,7 +131,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Bad Request: " + r.content)
         return jsonContent
 
-    def _postRequest(self, url, payloadJson=None, payLoadFiles=None,  debug=False):
+    def _postRequest(self, url, payloadJson=None, payLoadFiles=None, debug=False):
         if debug:
             print(url)
             print("POST: ", payloadJson)
@@ -263,7 +263,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         if isinstance(sarItem, SARConfig):
             configPayload = sarItem.getJSONFormat()
             configPayload["configurationNode"]["uniqueId"] = sarItem.uniqueId
-            configPayload["configurationNode"]["userName"]  = self._username # FIXME maybe move that as part of the method above
+            configPayload["configurationNode"]["userName"] = self._username  # FIXME maybe move that as part of the method above
             # TODO check with software, config seems to have different end-hook
             self._post_update_and_log(sarItem, configPayload, debug, url=self.url_config)
 
@@ -284,8 +284,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             url = self.url_node
             # TODO see if node url can be used for all updates, so far the config had a specific one
 
-        result = self._postRequest(url=url.format("")[:-1],  # remove the last slash
-                                   payloadJson=newPayload, debug=debug)
+        result = self._postRequest(url=url.format("")[:-1], payloadJson=newPayload, debug=debug)  # remove the last slash
         if result.status_code == 200:
             sarItem.dirty = False
             warnings.warn("[pychiver:SaveRestoreService] {} updated!".format(sarItem))
@@ -302,7 +301,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         for one in json["nodes"]:
             toReturn.append(self._fromNode_toSAR(one))
         return toReturn
-    
+
     def getCompositeSnapshot(self, snapshotId, snapshotName=None):
         json = self.getCompositeSnapshotStub(snapshotId)
         snapshots = []
@@ -361,7 +360,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Cannot get search for None element! Provide unique ID!")
         urlToGet = self.url_child.format(uniqueId)
         if forcedTypeTuple is None:
-            #print(urlToGet)
+            # print(urlToGet)
             return [self._fromNode_toSAR(a) for a in self._getRequest(urlToGet)]  # TODO apply self._fromNode_toSAR()
         else:
             toReturn = []

@@ -279,7 +279,7 @@ class SaveAndRestore:
         if isinstance(base, str):
             return self.service.getReferenced(snapshotId=base)
         raise ValueError(f"Service not able to find references to {base}, maybe wrong type? Use only string, SARSnapshot | SARCompositeSnapshot.")
-        
+
     def compareAndCheck(self, snapshot: SARSnapshot = None, date_time=None, timeout=1) -> bool:
         """
         Provides the true/false result of the comparison for a given snapshot.
@@ -399,17 +399,13 @@ class SaveAndRestore:
             self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, debug=debug)
 
     def update(self, sarItem: SARConfig | SARFolder | SARCompositeSnapshot, debug=False):
-
-        if not isinstance(sarItem, SARConfig) \
-                and not isinstance(sarItem, SARFolder) \
-                and not isinstance(sarItem, SARCompositeSnapshot):
+        if not isinstance(sarItem, SARConfig) and not isinstance(sarItem, SARFolder) and not isinstance(sarItem, SARCompositeSnapshot):
             raise ValueError("Not implemented for that type. Only SARConfig/SARFolder for now")
 
         if self._username is None:
             warnings.warn("[pychiver:SaveRestore] Cannot save without authenticated username! Skipping")
         else:
             self.service.updateSarItem(sarItem=sarItem, debug=False)
-
 
     def _updateCache(self, newConfiguration):
         import copy

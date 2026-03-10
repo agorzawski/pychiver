@@ -80,9 +80,7 @@ class SARFolder(SARItem):
         return "[F][{} - {}]".format(self.fullPath, self.uniqueId)
 
     def getJSONFormat(self):
-        return {"name": self.getName(),
-                "description": self.description,
-                "type": self.getType()}
+        return {"name": self.getName(), "description": self.description, "type": self.getType()}
 
 
 class SARConfig(SARItem):
@@ -121,17 +119,20 @@ class SARConfig(SARItem):
 
     def getJSONFormat(self):
         return {
-                "configurationNode": {
-                                      # "uniqueId": self.uniqueId,
-                                      "name": self.getName(),
-                                      "description": self.description,
-                                      "type": self.getType()},
-                "configurationData": {
-                    "pvList": [{"pvName": one.pvName,
-                                "readbackPvName": one.readbackPvName,
-                                "readOnly": one.readOnly, "comparison":one.comparison} for one in self.configList]
-                },
-            }
+            "configurationNode": {
+                # "uniqueId": self.uniqueId,
+                "name": self.getName(),
+                "description": self.description,
+                "type": self.getType(),
+            },
+            "configurationData": {
+                "pvList": [
+                    {"pvName": one.pvName, "readbackPvName": one.readbackPvName, "readOnly": one.readOnly, "comparison": one.comparison}
+                    for one in self.configList
+                ]
+            },
+        }
+
 
 class SARConfigPV:
     def __init__(self, **kwargs):
@@ -311,14 +312,14 @@ class SARSnapshot(SARSnapshotProto):
 
     def getJSONFormat(self):
         return {
-                "snapshotNode": {
-                    "name": self.getName(),
-                    "description": self.description,
-                    # "userName": self._username,
-                    "nodeType": self.getType(),
-                },
-                "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in self.getConfigPVs]},
-            }
+            "snapshotNode": {
+                "name": self.getName(),
+                "description": self.description,
+                # "userName": self._username,
+                "nodeType": self.getType(),
+            },
+            "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in self.getConfigPVs]},
+        }
 
 
 class SARCompositeSnapshot(SARSnapshotProto):
@@ -393,15 +394,17 @@ class SARCompositeSnapshot(SARSnapshotProto):
         return list(combinedList)
 
     def getJSONFormat(self):
-        return {"compositeSnapshotNode": {"name": self.name,
-                                          "nodeType": self.getType(),
-                                          # "userName": self._username,
-                                          "description": self.description},
-                "compositeSnapshotData": {
-                    "referencedSnapshotNodes": [one for one in self.getSnapshotsIds()],
-                },
-            }
-
+        return {
+            "compositeSnapshotNode": {
+                "name": self.name,
+                "nodeType": self.getType(),
+                # "userName": self._username,
+                "description": self.description,
+            },
+            "compositeSnapshotData": {
+                "referencedSnapshotNodes": [one for one in self.getSnapshotsIds()],
+            },
+        }
 
 
 class SarItemBuilder:
