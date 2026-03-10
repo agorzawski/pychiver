@@ -7,7 +7,8 @@ Authors:
     A.Gorzawski <arek.gorzawski@ess.eu>
 """
 import warnings
-from abc import abstractmethod
+from abc import abstractmethod, ABC
+from datetime import datetime
 
 import pandas as pd
 from enum import Enum, unique
@@ -22,7 +23,7 @@ class NodeType(Enum):
     COMPOSITE_SNAPSHOT = "V"
 
 
-class SARItem:
+class SARItem(ABC):
     """
     Top level SAR item, can be anything related to the SAR.
     """
@@ -54,6 +55,10 @@ class SARItem:
     def __repr__(self):
         return "[{}][{}] {} / {}".format(self.nodeType.value, "*" if self.dirty else " ", self.name, self.uniqueId)
 
+    @abstractmethod
+    def getJSONFormat(self):
+        pass
+
 
 class SARFolder(SARItem):
     """
@@ -73,6 +78,11 @@ class SARFolder(SARItem):
 
     def __repr__(self):
         return "[F][{} - {}]".format(self.fullPath, self.uniqueId)
+
+    def getJSONFormat(self):
+        return {"name": self.getName(),
+                "description": self.description,
+                "type": self.getType()}
 
 
 class SARConfig(SARItem):
@@ -102,6 +112,26 @@ class SARConfig(SARItem):
     def getReadBackPVs(self):
         return [o.readbackPvName for o in self.configList]
 
+    def getConfigPVs(self):
+        return self.configList
+
+    def updateConfigPVs(self, configList):
+        self.dirty = True
+        self.configList = configList
+
+    def getJSONFormat(self):
+        return {
+                "configurationNode": {
+                                      # "uniqueId": self.uniqueId,
+                                      "name": self.getName(),
+                                      "description": self.description,
+                                      "type": self.getType()},
+                "configurationData": {
+                    "pvList": [{"pvName": one.pvName,
+                                "readbackPvName": one.readbackPvName,
+                                "readOnly": one.readOnly, "comparison":one.comparison} for one in self.configList]
+                },
+            }
 
 class SARConfigPV:
     def __init__(self, **kwargs):
@@ -111,9 +141,10 @@ class SARConfigPV:
         self.readbackPvName = kwargs.get("readbackPvName", None)
 
         self.readOnly = kwargs.get("readOnly", False)
+        self.comparison = kwargs.get("comparison", None)
 
     def __repr__(self):
-        return "{} / {} [RO:{}]".format(self.pvName, self.readbackPvName, self.readOnly)
+        return "{} / {} [RO:{}] / {}".format(self.pvName, self.readbackPvName, self.readOnly, self.comparison)
 
     def get(self):
         return {"pvName": self.pvName, "readbackPvName": self.readbackPvName, "readOnly": self.readOnly}
@@ -278,6 +309,17 @@ class SARSnapshot(SARSnapshotProto):
                 return one.pvValue
         raise ValueError("no {} stored in this snapshot!".format(pvName))
 
+    def getJSONFormat(self):
+        return {
+                "snapshotNode": {
+                    "name": self.getName(),
+                    "description": self.description,
+                    # "userName": self._username,
+                    "nodeType": self.getType(),
+                },
+                "snapshotData": {"snapshotItems": [o.toJson(int(datetime.now().timestamp()), 0) for o in self.getConfigPVs]},
+            }
+
 
 class SARCompositeSnapshot(SARSnapshotProto):
     """
@@ -349,6 +391,17 @@ class SARCompositeSnapshot(SARSnapshotProto):
             for onePV in one.configPVs:
                 combinedList.append(onePV)
         return list(combinedList)
+
+    def getJSONFormat(self):
+        return {"compositeSnapshotNode": {"name": self.name,
+                                          "nodeType": self.getType(),
+                                          # "userName": self._username,
+                                          "description": self.description},
+                "compositeSnapshotData": {
+                    "referencedSnapshotNodes": [one for one in self.getSnapshotsIds()],
+                },
+            }
+
 
 
 class SarItemBuilder:

@@ -398,6 +398,19 @@ class SaveAndRestore:
         else:
             self.service.saveSarItem(sarItem=sarItem, parentId=parentNodeId, debug=debug)
 
+    def update(self, sarItem: SARConfig | SARFolder | SARCompositeSnapshot, debug=False):
+
+        if not isinstance(sarItem, SARConfig) \
+                and not isinstance(sarItem, SARFolder) \
+                and not isinstance(sarItem, SARCompositeSnapshot):
+            raise ValueError("Not implemented for that type. Only SARConfig/SARFolder for now")
+
+        if self._username is None:
+            warnings.warn("[pychiver:SaveRestore] Cannot save without authenticated username! Skipping")
+        else:
+            self.service.updateSarItem(sarItem=sarItem, debug=False)
+
+
     def _updateCache(self, newConfiguration):
         import copy
 

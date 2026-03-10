@@ -131,8 +131,15 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             raise ValueError("Bad Request: " + r.content)
         return jsonContent
 
-    def _postRequest(self, url, payloadJson):
-        r = self._session.post(url, files=payloadJson, verify=False)
+    def _postRequest(self, url, payloadJson=None, payLoadFiles=None,  debug=False):
+        if debug:
+            print(url)
+            print("POST: ", payloadJson)
+        if payLoadFiles is not None:
+            r = self._session.post(url, files=payloadJson, verify=False)
+        if payloadJson is not None:
+            r = self._session.post(url, json=payloadJson, verify=False)
+
         if r.status_code != 200:
             warnings.warn("[pychiver:SaveRestoreService] There is an issue [code {}] with the request! {}".format(r.status_code, r.content))
         return r
@@ -251,6 +258,37 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
                 warnings.warn("[pychiver:SaveRestoreService] {} saved!".format(sarItem))
         else:
             raise NotImplementedError("Saving only for SARConfig/SARSnapshot/SARFolder!")
+
+    def updateSarItem(self, sarItem: SARConfig | SARFolder | SARCompositeSnapshot, debug):
+        if isinstance(sarItem, SARConfig):
+            configPayload = sarItem.getJSONFormat()
+            configPayload["configurationNode"]["uniqueId"] = sarItem.uniqueId
+            configPayload["configurationNode"]["userName"]  = self._username # FIXME maybe move that as part of the method above
+            # TODO check with software, config seems to have different end-hook
+            self._post_update_and_log(sarItem, configPayload, debug, url=self.url_config)
+
+        if isinstance(sarItem, SARFolder):
+            folderPayload = sarItem.getJSONFormat()
+            folderPayload["uniqueId"] = sarItem.uniqueId
+            folderPayload["userName"] = self._username
+            self._post_update_and_log(sarItem, folderPayload, debug)
+
+        if isinstance(sarItem, SARCompositeSnapshot):
+            compositeSnap = sarItem.getJSONFormat()
+            compositeSnap["compositeSnapshotNode"]["uniqueId"] = sarItem.uniqueId
+            compositeSnap["compositeSnapshotNode"]["userName"] = self._username  # FIXME maybe move that as part of the method above
+            self._post_update_and_log(sarItem, compositeSnap, debug)
+
+    def _post_update_and_log(self, sarItem, newPayload, debug, url=None):
+        if url is None:
+            url = self.url_node
+            # TODO see if node url can be used for all updates, so far the config had a specific one
+
+        result = self._postRequest(url=url.format("")[:-1],  # remove the last slash
+                                   payloadJson=newPayload, debug=debug)
+        if result.status_code == 200:
+            sarItem.dirty = False
+            warnings.warn("[pychiver:SaveRestoreService] {} updated!".format(sarItem))
 
     def getCompositeSnapshotStub(self, uniqueId):
         a = self._getRequest(self.url_composite.format(uniqueId))
