@@ -216,6 +216,21 @@ compositeSnapshot = sar.save(sarItem=compositeSnapshot, parentNodeId='<folder un
 
 > No virtual snapshots to be saved  yet via this package, this is deferred WIP.
 
+#### TO UPDATE:
+
+Config example:
+```python
+config = sar.getConfiguration(configId=SOME_ID)
+pvs = config.getConfigPVs()
+pvs.append(SARConfigPV(pvName="SomePV4", readbackPvName="SomePV4-RB"))
+config.updateConfigPVs(pvs)
+sar.update(config)
+
+config.name="ChangedName"
+sar.update(config)
+```
+> NOTE: For now, only works for Folders, Configs and CompositeSnapshots
+
 ## Domain
 
 The main objects are:
