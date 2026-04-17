@@ -385,9 +385,9 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
             if r.status_code == 200:
                 warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
         if isinstance(snapshot, SARCompositeSnapshot):
-            r1 = self._postRequest(self.url_restorable_items.format(snapshot.uniqueId), payloadJson={})
+            r1 = self._getRequest(self.url_restorable_items.format(snapshot.uniqueId))
             # print(r1)
-            r = self._postRequest(self.url_restore_items, payloadJson=r1.json())
+            r = self._postRequest(self.url_restore_items, payloadJson=r1)
             if r.status_code == 200:
                 warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
         else:
