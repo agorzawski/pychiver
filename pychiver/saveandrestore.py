@@ -340,15 +340,15 @@ class SaveAndRestore:
             df["archived_value"] = values
         return df
 
-    def restore(self, snapshot: SARSnapshot = None, local=True, **kwargs):
+    def restore(self, snapshot: SARSnapshot | SARCompositeSnapshot = None, local=False, **kwargs):
         """
         Sets the PVs to their values as provided in the snapshot
         :param local: default true, or defer the restore function to the service.
         :param snapshot:
         :return: 0 when executed with success, 1 when error occurred
         """
-        if not isinstance(snapshot, SARSnapshot):
-            raise ValueError("For restore an SARSnapshot is required!")
+        if not isinstance(snapshot, SARSnapshotProto):
+            raise ValueError("For restore an SARSnapshot or SARCompositeSnapshot is required!")
 
         if not local:
             self.service.restore(snapshot)
