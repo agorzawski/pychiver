@@ -377,9 +377,12 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         urlToGet = self.url_parent.format(uniqueId)
         return self._fromNode_toSAR(self._getRequest(urlToGet))
 
-    def restore(self, snapshot: SARSnapshot):
-        if isinstance(snapshot, SARSnapshot):
+    def restore(self, snapshot: SARSnapshot | SARCompositeSnapshot):
+        if isinstance(snapshot, SARSnapshotProto):
             r = self._postRequest(self.url_restore.format(snapshot.uniqueId), payloadJson={})
             if r.status_code == 200:
                 warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
-        warnings.warn("[pychiver:SaveRestoreService] {} cannot restore non SnapshotItem!".format(snapshot))
+            else:
+                warnings.warn(f"[pychiver:SaveRestoreService] during the restore got issues {r}")
+        else:
+            warnings.warn("[pychiver:SaveRestoreService] {} cannot restore non SnapshotItem!".format(snapshot))
