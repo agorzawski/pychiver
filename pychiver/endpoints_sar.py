@@ -106,6 +106,8 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
         self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
         self.url_restore = "{}/restore/node?nodeId={{}}".format(self.service_url)
+        self.url_restore_items = "{}/restore/items".format(self.service_url)
+        self.url_restorable_items = "{}/composite-snapshot/{{}}/items".format(self.service_url)
         self.url_search_referenced = "{}/search?referenced={{}}".format(self.service_url)
 
         self._session = None
@@ -378,11 +380,15 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         return self._fromNode_toSAR(self._getRequest(urlToGet))
 
     def restore(self, snapshot: SARSnapshot | SARCompositeSnapshot):
-        if isinstance(snapshot, SARSnapshotProto):
+        if isinstance(snapshot, SARSnapshot):
             r = self._postRequest(self.url_restore.format(snapshot.uniqueId), payloadJson={})
             if r.status_code == 200:
                 warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
-            else:
-                warnings.warn(f"[pychiver:SaveRestoreService] during the restore got issues {r}")
+        if isinstance(snapshot, SARCompositeSnapshot):
+            r1 = self._postRequest(self.url_restorable_items.format(snapshot.uniqueId), payloadJson={})
+            # print(r1)
+            r = self._postRequest(self.url_restore_items, payloadJson=r1.json())
+            if r.status_code == 200:
+                warnings.warn("[pychiver:SaveRestoreService] {} restored!".format(snapshot))
         else:
-            warnings.warn("[pychiver:SaveRestoreService] {} cannot restore non SnapshotItem!".format(snapshot))
+            warnings.warn("[pychiver:SaveRestoreService] {} cannot restore non SARSnapshot/SARCompositeSnapshot!".format(snapshot))
