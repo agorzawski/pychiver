@@ -105,7 +105,7 @@ class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
         self.url_composite = "{}/composite-snapshot/{{}}".format(self.service_url)
         self.url_composite_nodes = "{}/composite-snapshot/{{}}/nodes".format(self.service_url)
         self.url_composite_nodes_put = "{}/composite-snapshot?parentNodeId={{}}".format(self.service_url)
-        self.url_restore = "{}/restore/node?parentNodeId={{}}".format(self.service_url)
+        self.url_restore = "{}/restore/node?nodeId={{}}".format(self.service_url)
         self.url_search_referenced = "{}/search?referenced={{}}".format(self.service_url)
 
         self._session = None
