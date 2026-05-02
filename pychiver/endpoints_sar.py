@@ -81,6 +81,10 @@ class SaveAndRestoreEndPoint(ABC):
     def getAllNodes(self, mainTree, uniqueId=None, path="", nodeType=NodeType.NONE, size=100):
         pass
 
+    @abstractmethod
+    def restore(self, snapshot: SARSnapshot | SARCompositeSnapshot):
+        pass
+
 
 class JSONSaveAndRestoreEndPoint(SaveAndRestoreEndPoint):
     """

@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pychiver",
-    version="0.8.5",
+    version="0.9.0",
     author="Arek Gorzawski",
     author_email="arek.gorzawski@ess.eu",
     description="A python utility for EPICS archiver, SaveAndRestore and waveform handling",
@@ -19,7 +19,7 @@ setuptools.setup(
         "python-dateutil",
         "pandas",
         "matplotlib",
-        "numpy==1.26.3",
+        "numpy",
         "p4p",
         "pyepics",
         "python-gitlab",

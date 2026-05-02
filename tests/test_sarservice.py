@@ -76,6 +76,7 @@ class MockUpEpics:
     def put(self, pvlist, values, **kwargs):
         self.pv1 = values[0]
         self.pv2 = values[1]
+        print(f"Restoring Local values {values}")
 
 
 class MockUpEndpoint(SaveAndRestoreEndPoint):
@@ -124,6 +125,9 @@ class MockUpEndpoint(SaveAndRestoreEndPoint):
     def getCompositeSnapshotStub(self, uniqueId):
         pass
 
+    def restore(self, snapshot: SARSnapshot | SARCompositeSnapshot):
+        pass
+
 
 class TestSARService(unittest.TestCase):
     def setUp(self):
@@ -162,7 +166,7 @@ class TestSARService(unittest.TestCase):
         self.assertEqual(PV2_LIVE_VAL, a.getStoredValue(PV2))
 
     def test_restoreSnapshot(self):
-        self.sar.restore(SNAPSHOT_2)
+        self.sar.restore(SNAPSHOT_2, local=True)
         b = self.sar.takeSnapshot(CONFIG, newName="some name", newDescription="newDesc")
         self.assertEqual(SNAP_2_VALUES[PV1], b.getStoredValue(PV1))
         self.assertEqual(SNAP_2_VALUES[PV2], b.getStoredValue(PV2))
