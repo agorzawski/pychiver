@@ -45,7 +45,7 @@ from .calculations import (
     CalculationMode,
 )
 from .domain import PVMetaInfo
-from .endpoints import EndPointArchiver
+from .endpoints import JsonEndPointArchiver
 from . import config
 from .instances import DEFAULT_ARCHIVER, DEFAULT_MAX_EXTRACTION_SIZE, DEFAULT_ARCHIVER_CONF
 from .timeutils import getDateTimeObj
@@ -53,7 +53,7 @@ from .analysis import find_same
 
 
 class Archiver:
-    def __init__(self, archiver_url=DEFAULT_ARCHIVER, DefaultEndPoint=EndPointArchiver):
+    def __init__(self, archiver_url=DEFAULT_ARCHIVER, DefaultEndPoint=JsonEndPointArchiver):
         """
         Initializes the archiver with a provided url. If no url provided,
         a system environment EPICS_ARCHIVER_URL is asked if not set raises ValueError
