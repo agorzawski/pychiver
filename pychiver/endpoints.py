@@ -193,7 +193,7 @@ class EndPointApplianceArchiver(EndPoint):
 
     def _getRawRequest(
         self, PV, start_date, end_date=None, entries_limit=5000, entries_warning_limit=5000, iteration=24, calc=Calculation.NTH, calc_mode=CalculationMode.TOTAL
-    ) -> list[ArchiveEvent]:
+    ):
         start_date, end_date = validateTimeStampsReturnObjects(start_date, end_date)
         entries = self._countEntries(PV, start_date, end_date)
         if not entries:
@@ -228,7 +228,7 @@ class EndPointApplianceArchiver(EndPoint):
                 return []
         return toReturn
 
-    def _get_data_request(self, PV, start_date: datetime, end_date: datetime, calc=Calculation.NTH, nth=1) -> list[ArchiveEvent]:
+    def _get_data_request(self, PV, start_date: datetime, end_date: datetime, calc=Calculation.NTH, nth=1):
         func = calc.value.format(nth)
         return self.archiver_appliance.get_events(f"{func}({PV})", start_date, end_date)
 
