@@ -314,7 +314,7 @@ class JsonEndPointArchiver(EndPoint):
         super().__init__(archiver_url, retriever_url)
         self.archiver_url_data = f"{retriever_url}:{data_port}/retrieval/data/getData.json"
         self.archiver_url_mgmt = f"{archiver_url}:{mgmt_port}/mgmt/bpl"
-        self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(retriever_url)
+        self.archiver_aggregating_url = "{}:{}?pv={{}}({{}})&from={{}}&to={{}}".format(retriever_url, data_port)
 
     def getDataForPV(
         self,
