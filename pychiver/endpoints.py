@@ -11,7 +11,7 @@ import warnings
 
 warnings.formatwarning = lambda msg, *args, **kwargs: f"{msg}\n"  # Monkey-patching to remove line of source code
 from json import JSONDecodeError
-
+import json
 # from epicsarchiver import ArchiverAppliance
 # from epicsarchiver import ArchiveEvent
 
@@ -314,7 +314,7 @@ class JsonEndPointArchiver(EndPoint):
         super().__init__(archiver_url, retriever_url)
         self.archiver_url_data = f"{retriever_url}:{data_port}/retrieval/data/getData.json"
         self.archiver_url_mgmt = f"{archiver_url}:{mgmt_port}/mgmt/bpl"
-        self.archiver_aggregating_url = "{}:{}?pv={{}}({{}})&from={{}}&to={{}}".format(retriever_url, data_port)
+        self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(self.archiver_url_data)
 
     def getDataForPV(
         self,
