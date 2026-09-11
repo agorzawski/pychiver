@@ -33,8 +33,9 @@ class EndPoint:
     Abstract end point implementation for the Archiver
     """
 
-    def __init__(self, archiver_url=None):
+    def __init__(self, archiver_url=None, retriever_url=None, **kwargs):
         self.archiver_url = archiver_url
+        self.retriever_url = retriever_url
         if self.archiver_url is None:
             raise ValueError("Cannot instantiate Archiver without a proper link to the service.")
 
@@ -309,11 +310,11 @@ class JsonEndPointArchiver(EndPoint):
     JSON end point implementation for the ESS Archiver
     """
 
-    def __init__(self, archiver_url=None):
-        super().__init__(archiver_url)
-        self.archiver_url_data = "{}:17668/retrieval/data/getData.json".format(archiver_url)
-        self.archiver_url_mgmt = "{}:17665/mgmt/bpl".format(archiver_url)
-        self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(self.archiver_url_data)
+    def __init__(self, archiver_url=None, retriever_url=None, data_port=17668, mgmt_port=17665):
+        super().__init__(archiver_url, retriever_url)
+        self.archiver_url_data = f"{retriever_url}:{data_port}/retrieval/data/getData.json"
+        self.archiver_url_mgmt = f"{archiver_url}:{mgmt_port}/mgmt/bpl"
+        self.archiver_aggregating_url = "{}?pv={{}}({{}})&from={{}}&to={{}}".format(retriever_url)
 
     def getDataForPV(
         self,

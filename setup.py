@@ -23,7 +23,7 @@ setuptools.setup(
         "p4p",
         "pyepics",
         "python-gitlab",
-        "py-epicsarchiver>=0.5",
+        # "py-epicsarchiver>=0.5",
     ],
     packages=setuptools.find_packages(),
 )

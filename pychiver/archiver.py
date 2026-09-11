@@ -53,7 +53,9 @@ from .analysis import find_same
 
 
 class Archiver:
-    def __init__(self, archiver_url=DEFAULT_ARCHIVER, DefaultEndPoint=JsonEndPointArchiver):
+    def __init__(self, archiver_url=DEFAULT_ARCHIVER, retriever_url=DEFAULT_ARCHIVER,
+                       data_port=17668, mgmt_port=17665,
+                       DefaultEndPoint=JsonEndPointArchiver):
         """
         Initializes the archiver with a provided url. If no url provided,
         a system environment EPICS_ARCHIVER_URL is asked if not set raises ValueError
@@ -70,7 +72,7 @@ class Archiver:
                                 Set EPICS_ARCHIVER_URL in your env."
                 )
 
-        self.archiver = DefaultEndPoint(archiver_url=archiver_url)
+        self.archiver = DefaultEndPoint(archiver_url=archiver_url, retriever_url=retriever_url, data_port=data_port, mgmt_port=mgmt_port)
 
     def get(
         self,
